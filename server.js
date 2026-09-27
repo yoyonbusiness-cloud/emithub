@@ -789,52 +789,52 @@ function startServer(port = 3000) {
         }
         socket.emit('public-rooms-list', initPublicList);
 
-function getNearbyNetworkGroup(socket) {
-    const headers = socket.handshake.headers || {};
-    let raw = headers['x-arr-clientip'] ||
-        headers['cf-connecting-ip'] ||
-        headers['x-real-ip'] ||
-        headers['x-client-ip'] ||
-        (headers['x-forwarded-for'] ? headers['x-forwarded-for'].split(',')[0] : '') ||
-        socket.handshake.address ||
-        '';
+        function getNearbyNetworkGroup(socket) {
+            const headers = socket.handshake.headers || {};
+            let raw = headers['x-arr-clientip'] ||
+                headers['cf-connecting-ip'] ||
+                headers['x-real-ip'] ||
+                headers['x-client-ip'] ||
+                (headers['x-forwarded-for'] ? headers['x-forwarded-for'].split(',')[0] : '') ||
+                socket.handshake.address ||
+                '';
 
-    let ip = String(raw).trim();
-    if (!ip) return 'nearby:default';
+            let ip = String(raw).trim();
+            if (!ip) return 'nearby:default';
 
-    const bracketMatch = ip.match(/^\[([a-fA-F0-9:]+)\](?::\d+)?$/);
-    if (bracketMatch) {
-        ip = bracketMatch[1];
-    } else {
-        const ipv4PortMatch = ip.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::\d+)?$/);
-        if (ipv4PortMatch) {
-            ip = ipv4PortMatch[1];
+            const bracketMatch = ip.match(/^\[([a-fA-F0-9:]+)\](?::\d+)?$/);
+            if (bracketMatch) {
+                ip = bracketMatch[1];
+            } else {
+                const ipv4PortMatch = ip.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::\d+)?$/);
+                if (ipv4PortMatch) {
+                    ip = ipv4PortMatch[1];
+                }
+            }
+
+            ip = ip.replace(/^::ffff:/i, '').trim();
+
+            const isLoopback = ip === '::1' || ip === '127.0.0.1' || ip === 'localhost';
+            const isPrivateIpv4 = /^(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3})$/.test(ip);
+            const isPrivateIpv6 = /^(fe80:|fc|fd)/i.test(ip);
+
+            if (isLoopback || isPrivateIpv4 || isPrivateIpv6) {
+                return 'nearby:local-lan';
+            }
+
+            if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) {
+                return `nearby:${ip}`;
+            }
+
+            if (ip.includes(':')) {
+                const parts = ip.split(':');
+                if (parts.length >= 4) {
+                    return `nearby:${parts.slice(0, 4).join(':')}`;
+                }
+            }
+
+            return `nearby:${ip}`;
         }
-    }
-
-    ip = ip.replace(/^::ffff:/i, '').trim();
-
-    const isLoopback = ip === '::1' || ip === '127.0.0.1' || ip === 'localhost';
-    const isPrivateIpv4 = /^(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3})$/.test(ip);
-    const isPrivateIpv6 = /^(fe80:|fc|fd)/i.test(ip);
-
-    if (isLoopback || isPrivateIpv4 || isPrivateIpv6) {
-        return 'nearby:local-lan';
-    }
-
-    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) {
-        return `nearby:${ip}`;
-    }
-
-    if (ip.includes(':')) {
-        const parts = ip.split(':');
-        if (parts.length >= 4) {
-            return `nearby:${parts.slice(0, 4).join(':')}`;
-        }
-    }
-
-    return `nearby:${ip}`;
-}
 
         socket.on('nearby-announce', (info) => {
             const networkGroup = getNearbyNetworkGroup(socket);

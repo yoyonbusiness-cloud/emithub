@@ -10,7 +10,6 @@
         content="EmitHub is a secure peer-to-peer file sharing tool that allows you to send large files directly to others without intermediate servers.">
     <link rel="icon" type="image/png" href="favicon.png">
 
-    <!-- Set theme immediately to prevent color flash on reload -->
     <script>
         (function () {
             const theme = localStorage.getItem('emit-theme') || 'dark';
@@ -179,7 +178,8 @@
     <canvas id="rgb-liquid-canvas"
         style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:-1;display:none;opacity:0.85;"></canvas>
     <canvas id="lofi-rain-canvas"></canvas>
-    <canvas id="lofi-aurora-canvas" style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:0;display:none;opacity:1;"></canvas>
+    <canvas id="lofi-aurora-canvas"
+        style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:0;display:none;opacity:1;"></canvas>
 
     <div id="fullscreen-drop-overlay" class="fullscreen-drop-overlay">
         <div class="fullscreen-drop-content">
@@ -264,7 +264,6 @@
 
 
 
-            <!-- TODO: Add streak badge here in a future update when they give a damn -->
             <button id="feedback-toggle-btn" class="btn-audit-toggle" title="Report Bug / Suggest Feature">
                 <i class="fa-solid fa-bug"></i>
                 <span>Report / Suggest</span>
@@ -365,10 +364,17 @@
                 </div>
                 <ul
                     style="margin:0; padding-left:1.1rem; color: var(--text-secondary); line-height:1.7; display:grid; gap:0.75rem;">
-                    <li><strong style="color:var(--text-pure);">Direct-to-Disk Saving</strong>: Normally, browsers dump everything you download into your RAM until the transfer is finished. If you try downloading a 5GB–50GB file, your browser runs out of memory and crashes. Direct-to-Disk fixes this by writing incoming chunks straight to your hard drive in real time. Your browser uses basically zero RAM, meaning you can send massive files with no tab crashes.</li>
-                    <li><strong style="color:var(--text-pure);">Local Nearby Drop</strong>: Discover and send files directly to devices on the same Wi-Fi network without typing codes or copying links.</li>
-                    <li><strong style="color:var(--text-pure);">Feedback &amp; Reports</strong>: Send bug reports or ideas directly to the admin from right inside the app.</li>
-                    <li><strong style="color:var(--text-pure);">Security Shield</strong>: Safety warnings and confirmations before saving executable or suspicious file types.</li>
+                    <li><strong style="color:var(--text-pure);">Direct-to-Disk Saving</strong>: Normally, browsers dump
+                        everything you download into your RAM until the transfer is finished. If you try downloading a
+                        5GB–50GB file, your browser runs out of memory and crashes. Direct-to-Disk fixes this by writing
+                        incoming chunks straight to your hard drive in real time. Your browser uses basically zero RAM,
+                        meaning you can send massive files with no tab crashes.</li>
+                    <li><strong style="color:var(--text-pure);">Local Nearby Drop</strong>: Discover and send files
+                        directly to devices on the same Wi-Fi network without typing codes or copying links.</li>
+                    <li><strong style="color:var(--text-pure);">Feedback &amp; Reports</strong>: Send bug reports or
+                        ideas directly to the admin from right inside the app.</li>
+                    <li><strong style="color:var(--text-pure);">Security Shield</strong>: Safety warnings and
+                        confirmations before saving executable or suspicious file types.</li>
                 </ul>
             </section>
         </div>
@@ -504,8 +510,10 @@
                             </div>
 
                             <div class="custom-word-area" style="margin-top: 1rem; width: 100%;">
-                                <label style="display:flex; align-items:center; gap:0.65rem; color:var(--text-secondary); font-size:0.85rem; cursor:pointer; margin-bottom: 0.75rem;">
-                                    <input type="checkbox" id="enable-schedule-checkbox" onchange="document.getElementById('recurring-schedule-inputs').style.display=this.checked?'flex':'none'">
+                                <label
+                                    style="display:flex; align-items:center; gap:0.65rem; color:var(--text-secondary); font-size:0.85rem; cursor:pointer; margin-bottom: 0.75rem;">
+                                    <input type="checkbox" id="enable-schedule-checkbox"
+                                        onchange="document.getElementById('recurring-schedule-inputs').style.display=this.checked?'flex':'none'">
                                     <span>Enable Daily Schedule (Optional)</span>
                                 </label>
                                 <div id="recurring-schedule-inputs" style="display:none; gap: 0.5rem;">
@@ -802,7 +810,7 @@
                         class="social-icon">
                         <i class="fa-brands fa-instagram"></i>
                     </a>
-                    <a href="https://github.com/yoyonbusiness-cloud/YOUShare.git" target="_blank" rel="noopener"
+                    <a href="https://github.com/yoyonbusiness-cloud/emithub.git" target="_blank" rel="noopener"
                         title="GitHub" class="social-icon">
                         <i class="fa-brands fa-github"></i>
                     </a>
@@ -865,17 +873,22 @@
 
     <div id="file-note-modal" class="drop-modal-overlay" style="display:none;">
         <div class="drop-modal" style="padding: 2.5rem; max-width: 480px;">
-            <button class="top-close-btn" id="file-note-close-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
+            <button class="top-close-btn" id="file-note-close-btn" title="Close"><i
+                    class="fa-solid fa-xmark"></i></button>
             <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem;">
-                <div style="width:36px; height:36px; border-radius:50%; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.25); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <div
+                    style="width:36px; height:36px; border-radius:50%; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.25); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                     <i class="fa-solid fa-note-sticky" style="color:var(--accent-emerald); font-size:0.9rem;"></i>
                 </div>
                 <h2 class="drop-modal-title" style="margin:0;">Note from Sender</h2>
             </div>
-            <div id="file-note-content" style="background:var(--btn-ghost-bg); border:1px solid var(--card-border); border-radius:10px; padding:1rem 1.25rem; font-size:0.95rem; color:var(--text-primary); line-height:1.6; margin-bottom:1.75rem; white-space:pre-wrap; word-break:break-word;"></div>
+            <div id="file-note-content"
+                style="background:var(--btn-ghost-bg); border:1px solid var(--card-border); border-radius:10px; padding:1rem 1.25rem; font-size:0.95rem; color:var(--text-primary); line-height:1.6; margin-bottom:1.75rem; white-space:pre-wrap; word-break:break-word;">
+            </div>
             <div class="drop-modal-btns">
                 <button id="file-note-ok-btn" class="btn-pill btn-ghost">Close</button>
-                <button id="file-note-download-btn" class="btn-pill btn-primary" style="display:none;"><i class="fa-solid fa-download" style="margin-right:0.4rem;"></i>Save File</button>
+                <button id="file-note-download-btn" class="btn-pill btn-primary" style="display:none;"><i
+                        class="fa-solid fa-download" style="margin-right:0.4rem;"></i>Save File</button>
             </div>
         </div>
     </div>
@@ -906,7 +919,7 @@
             <form id="drop-modal-form" class="hosted-modal-form">
                 <div class="drop-modal-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
                 <h2 class="drop-modal-title">Share Options</h2>
-                <div class="drop-modal-desc">Choose delay for Hosted Link (max 48h).</div>
+                <div class="drop-modal-desc" id="drop-modal-desc">Choose delay for Hosted Link (max 48h).</div>
 
                 <div class="time-selector-group" id="drop-expiry-controls">
                     <div style="flex: 1;">
@@ -951,42 +964,60 @@
                         autocomplete="off">
                 </div>
 
-                <div id="access-controls-section" style="display:flex; flex-direction:column; gap:0.55rem; margin-top:0.75rem; margin-bottom:0.5rem; padding:0.85rem; border-radius:10px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05);">
+                <div id="access-controls-section"
+                    style="display:flex; flex-direction:column; gap:0.55rem; margin-top:0.75rem; margin-bottom:0.5rem; padding:0.85rem; border-radius:10px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.2rem;">
-                        <span style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Access Controls</span>
-                        <span id="access-admin-badge" style="display:none; font-size:0.65rem; padding:0.12rem 0.5rem; border-radius:999px; background:rgba(239, 68, 68, 0.15); color:var(--accent-danger); border:1px solid rgba(239, 68, 68, 0.3); font-weight:700;">Admin Mode</span>
+                        <span
+                            style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Access
+                            Controls</span>
+                        <span id="access-admin-badge"
+                            style="display:none; font-size:0.65rem; padding:0.12rem 0.5rem; border-radius:999px; background:rgba(239, 68, 68, 0.15); color:var(--accent-danger); border:1px solid rgba(239, 68, 68, 0.3); font-weight:700;">Admin
+                            Mode</span>
                     </div>
 
-                    <div id="admin-access-controls" style="display:none; flex-direction:column; gap:0.55rem; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
-                        <label style="display:flex; align-items:center; gap:0.65rem; color:var(--text-secondary); font-size:0.82rem; cursor:pointer;">
+                    <div id="admin-access-controls"
+                        style="display:none; flex-direction:column; gap:0.55rem; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <label
+                            style="display:flex; align-items:center; gap:0.65rem; color:var(--text-secondary); font-size:0.82rem; cursor:pointer;">
                             <input type="checkbox" id="canary-ping-checkbox">
-                            <span><strong style="color:var(--text-pure);">Canary Ping</strong> — Silently notify admin when link is opened</span>
+                            <span><strong style="color:var(--text-pure);">Canary Ping</strong> — Silently notify admin
+                                when link is opened</span>
                         </label>
 
-                        <label style="display:flex; align-items:center; gap:0.65rem; color:var(--text-secondary); font-size:0.82rem; cursor:pointer;">
+                        <label
+                            style="display:flex; align-items:center; gap:0.65rem; color:var(--text-secondary); font-size:0.82rem; cursor:pointer;">
                             <input type="checkbox" id="decoy-trap-checkbox">
-                            <span><strong style="color:var(--accent-danger);">Decoy Trap</strong> — Log opener IP + device to admin inbox invisibly</span>
+                            <span><strong style="color:var(--accent-danger);">Decoy Trap</strong> — Log opener IP +
+                                device to admin inbox invisibly</span>
                         </label>
                     </div>
 
-                    <label style="display:flex; align-items:center; gap:0.65rem; color:var(--text-secondary); font-size:0.82rem; cursor:pointer;">
+                    <label
+                        style="display:flex; align-items:center; gap:0.65rem; color:var(--text-secondary); font-size:0.82rem; cursor:pointer;">
                         <input type="checkbox" id="timed-window-checkbox">
-                        <span><strong style="color:var(--accent-warning);">Timed Window</strong> — Only downloadable between set hours</span>
+                        <span><strong style="color:var(--accent-warning);">Timed Window</strong> — Only downloadable
+                            between set hours</span>
                     </label>
                     <div id="timed-window-inputs" style="display:none; margin-top:0.35rem;">
-                        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.45rem; font-size:0.8rem; color:var(--text-secondary);">
+                        <div
+                            style="display:flex; align-items:center; flex-wrap:wrap; gap:0.45rem; font-size:0.8rem; color:var(--text-secondary);">
                             <span>From</span>
-                            <input type="time" id="timed-window-start" class="form-input" value="09:00" style="width:105px; padding:0.25rem 0.5rem; font-size:0.8rem; background:var(--card-elevated);">
+                            <input type="time" id="timed-window-start" class="form-input" value="09:00"
+                                style="width:105px; padding:0.25rem 0.5rem; font-size:0.8rem; background:var(--card-elevated);">
                             <span>to</span>
-                            <input type="time" id="timed-window-end" class="form-input" value="17:00" style="width:105px; padding:0.25rem 0.5rem; font-size:0.8rem; background:var(--card-elevated);">
-                            <span style="font-size:0.72rem; color:var(--text-muted); white-space:nowrap;">(server time)</span>
+                            <input type="time" id="timed-window-end" class="form-input" value="13:00"
+                                style="width:105px; padding:0.25rem 0.5rem; font-size:0.8rem; background:var(--card-elevated);">
+                            <span style="font-size:0.72rem; color:var(--text-muted); white-space:nowrap;">(max 4h window, server time)</span>
                         </div>
                     </div>
                 </div>
 
-                <div style="display:flex; align-items:center; gap:0.65rem; margin-bottom:0.75rem; color:var(--text-secondary); font-size:0.82rem;">
+                <div
+                    style="display:flex; align-items:center; gap:0.65rem; margin-bottom:0.75rem; color:var(--text-secondary); font-size:0.82rem;">
                     <input type="checkbox" id="drop-burn-checkbox" style="cursor:pointer; width:16px; height:16px;">
-                    <label for="drop-burn-checkbox" style="cursor:pointer;"><i class="fa-solid fa-fire" style="color:var(--accent-danger, #ef4444); font-size:0.85em; margin-right:0.2em;"></i> Burn on First Download</label>
+                    <label for="drop-burn-checkbox" style="cursor:pointer;"><i class="fa-solid fa-fire"
+                            style="color:var(--accent-danger, #ef4444); font-size:0.85em; margin-right:0.2em;"></i> Burn
+                        on First Download</label>
                 </div>
 
                 <div class="drop-modal-btns">
@@ -1238,7 +1269,6 @@
         </div>
     </div>
 
-    <!-- Report Bug / Suggest Feature Modal -->
     <div id="feedback-modal" class="drop-modal-overlay" style="display:none; z-index: 10003;">
         <div class="drop-modal" style="max-width: 480px; padding: 2.25rem; text-align: left;">
             <button class="top-close-btn" id="feedback-modal-close" title="Close"><i
@@ -1281,7 +1311,6 @@
         </div>
     </div>
 
-    <!-- Admin Submissions Inbox Modal -->
     <div id="admin-inbox-modal" class="drop-modal-overlay" style="display:none; z-index: 10006;">
         <div class="drop-modal" style="max-width: 620px; width: 94%; padding: 0; overflow: hidden; text-align: left;">
             <div
@@ -1291,9 +1320,12 @@
                     <h3 class="drop-modal-title" style="margin:0; font-size:1.1rem;">Feedback &amp; Reports Inbox</h3>
                 </div>
                 <div style="display:flex; align-items:center; margin-right: 2.75rem;">
-                    <button id="admin-inbox-clear-all" class="btn-pill btn-ghost btn-sm" style="font-size:0.75rem; padding:0.35rem 0.85rem; color:var(--accent-danger); border-color:rgba(239,68,68,0.25); cursor:pointer;">Clear All</button>
+                    <button id="admin-inbox-clear-all" class="btn-pill btn-ghost btn-sm"
+                        style="font-size:0.75rem; padding:0.35rem 0.85rem; color:var(--accent-danger); border-color:rgba(239,68,68,0.25); cursor:pointer;">Clear
+                        All</button>
                 </div>
-                <button class="top-close-btn" id="admin-inbox-close" title="Close"><i class="fa-solid fa-xmark"></i></button>
+                <button class="top-close-btn" id="admin-inbox-close" title="Close"><i
+                        class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="admin-inbox-list"
                 style="max-height: 480px; overflow-y: auto; padding: 1.25rem; display:flex; flex-direction:column; gap:0.75rem;">
@@ -1303,7 +1335,6 @@
         </div>
     </div>
 
-    <!-- Security Warning (Antivirus / Security Scanner) Modal -->
     <div id="security-warning-modal" class="drop-modal-overlay" style="display:none; z-index: 10005;">
         <div class="drop-modal"
             style="max-width: 440px; padding: 2.25rem; text-align: center; border: 1px solid rgba(239, 68, 68, 0.4);">
@@ -1330,26 +1361,24 @@
         </div>
     </div>
 
-    <!-- Command Palette Modal -->
     <div id="command-palette-modal" class="drop-modal-overlay"
-        style="display:none; z-index: 10005; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); align-items: flex-start; padding-top: 10vh;">
+        style="display:none; z-index: 10005; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); align-items: flex-start; padding-top: max(2vh, 8px); padding-left: 4px; padding-right: 4px;">
         <div class="drop-modal command-palette-card"
-            style="max-width: 540px; width: 90%; background: var(--card-surface); border: 1px solid var(--card-border); padding: 0; overflow: hidden; border-radius: 16px; box-shadow: 0 24px 64px rgba(0,0,0,0.7); text-align: left;">
+            style="max-width: 640px; width: min(640px, calc(100vw - 8px)); background: var(--card-surface); border: 1px solid var(--card-border); padding: 0 !important; overflow: hidden; border-radius: 14px; box-shadow: 0 24px 64px rgba(0,0,0,0.7); text-align: left; margin: 0 auto;">
             <div
-                style="display: flex; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); gap: 0.75rem;">
+                style="display: flex; align-items: center; padding: 0.9rem 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.06); gap: 0.75rem;">
                 <i class="fa-solid fa-magnifying-glass" style="color: var(--text-secondary); font-size: 1.1rem;"></i>
                 <input type="text" id="command-palette-input" placeholder="Search actions, shortcuts, and tools..."
-                    style="flex: 1; background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; -webkit-tap-highlight-color: transparent !important; color: var(--text-primary) !important; font-size: 1.05rem; font-weight: 500; font-family: var(--font-sans);"
+                    style="flex: 1; background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; -webkit-tap-highlight-color: transparent !important; color: var(--text-primary) !important; font-size: 1rem; font-weight: 500; font-family: var(--font-sans);"
                     autocomplete="off">
                 <span
                     style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 0.25rem 0.5rem; border-radius: 6px; font-family: var(--font-mono);">ESC</span>
             </div>
 
-            <div id="command-palette-results" style="max-height: 320px; overflow-y: auto; padding: 0.5rem;">
-                <!-- dynamic list items go here -->
+            <div id="command-palette-results"
+                style="max-height: min(78vh, 620px); overflow-y: auto; padding: 0.3rem 0.35rem;">
             </div>
 
-            <!-- Contextual inline form (e.g. entering join code or hosted URL) -->
             <div id="command-palette-form-container"
                 style="display: none; padding: 1.25rem 1.5rem; border-top: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.01);">
                 <label id="command-palette-form-label"
@@ -1378,7 +1407,6 @@
 
 
 
-    <!-- Nearby P2P Incoming Request Modal -->
     <div id="nearby-request-modal" class="drop-modal-overlay" style="display:none; z-index: 10003;">
         <div class="drop-modal" style="max-width: 440px; padding: 2.25rem; text-align: center;">
             <div
@@ -1400,7 +1428,6 @@
         </div>
     </div>
 
-    <!-- Nearby Hosted Link Invitation Modal (Accept Before Opening) -->
 
     <div id="nearby-hosted-request-modal" class="drop-modal-overlay" style="display:none; z-index: 10004;">
         <div class="drop-modal" style="max-width: 440px; padding: 2.25rem; text-align: center;">
@@ -1437,12 +1464,14 @@
             </div>
             <h3 class="drop-modal-title" style="margin-bottom: 0.5rem;">Direct-to-Disk Stream</h3>
             <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem; line-height: 1.5;">
-                <strong id="direct-stream-filename" style="color: var(--text-pure);">file.bin</strong> (<span id="direct-stream-filesize" style="color: var(--accent-emerald);">0 MB</span>) is ready to transfer.
+                <strong id="direct-stream-filename" style="color: var(--text-pure);">file.bin</strong> (<span
+                    id="direct-stream-filesize" style="color: var(--accent-emerald);">0 MB</span>) is ready to transfer.
                 <br>Select where to save it to stream directly to your disk.
             </p>
             <div style="display: flex; gap: 0.75rem;">
                 <button id="direct-stream-memory-btn" class="btn-pill btn-ghost" style="flex: 1;">Save in RAM</button>
-                <button id="direct-stream-pick-btn" class="btn-pill btn-primary" style="flex: 1;">Pick Save Location</button>
+                <button id="direct-stream-pick-btn" class="btn-pill btn-primary" style="flex: 1;">Pick Save
+                    Location</button>
             </div>
         </div>
     </div>
@@ -1477,10 +1506,14 @@
             </div>
         </div>
         <div class="lofi-controls">
-            <button class="lofi-btn" id="lofi-mood-btn" title="Toggle Pink/Blue Mood (Easter Egg)"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
-            <button class="lofi-btn" id="lofi-expand-btn" title="Ambience sliders"><i class="fa-solid fa-sliders"></i></button>
-            <button class="lofi-btn lofi-play-btn" id="lofi-play-btn" title="Play / Pause"><i class="fa-solid fa-play"></i></button>
-            <button class="lofi-btn" id="lofi-next-btn" title="Next track"><i class="fa-solid fa-forward-step"></i></button>
+            <button class="lofi-btn" id="lofi-mood-btn" title="Toggle Pink/Blue Mood (Easter Egg)"><i
+                    class="fa-solid fa-wand-magic-sparkles"></i></button>
+            <button class="lofi-btn" id="lofi-expand-btn" title="Ambience sliders"><i
+                    class="fa-solid fa-sliders"></i></button>
+            <button class="lofi-btn lofi-play-btn" id="lofi-play-btn" title="Play / Pause"><i
+                    class="fa-solid fa-play"></i></button>
+            <button class="lofi-btn" id="lofi-next-btn" title="Next track"><i
+                    class="fa-solid fa-forward-step"></i></button>
             <button class="lofi-btn" id="lofi-close-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="lofi-expand" id="lofi-expand-panel">

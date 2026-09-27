@@ -40,7 +40,6 @@ async function importDropKey(b64, usages = ['decrypt']) {
     return await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, false, usages);
 }
 
-// Expose for app.js resume UI
 window.loadHostedResumeState = function (token) {
     if (!token) return null;
     try {
@@ -171,7 +170,6 @@ async function hostedDrop(file, onProgress, durationMs = 60 * 60 * 1000, nicknam
     const chunkSize = session.chunkSize || HOSTED_CHUNK_SIZE_BYTES;
     const chunkCount = session.chunkCount;
 
-    // Resume validation
     if (existingResume) {
         if (existingResume.fileName !== file.name || existingResume.fileSize !== file.size) {
             throw new Error('Resume failed: File mismatch. Please select the original file.');
@@ -207,7 +205,6 @@ async function hostedDrop(file, onProgress, durationMs = 60 * 60 * 1000, nicknam
         isResuming = true;
     }
 
-    // Server-side resume check: Merge server-reported chunks
     if (session.partsReceived && Array.from(session.partsReceived).length > 0) {
         session.partsReceived.forEach(idx => uploadedChunks.add(idx));
         completedChunks = uploadedChunks.size;
@@ -563,11 +560,9 @@ async function receiveHostedDrop() {
             return;
         }
 
-        // Use the user's setting to choose timer format, exactly as in activity tracker
         if (window.uiShared && typeof window.uiShared.formatExpiryCountdown === 'function') {
             expiryTextEl.textContent = 'Expires in ' + window.uiShared.formatExpiryCountdown(diff);
         } else {
-            // fallback: largest unit formatting
             const totalSeconds = Math.max(0, Math.ceil(diff / 1000));
             const h = Math.floor(totalSeconds / 3600);
             const m = Math.floor((totalSeconds % 3600) / 60);
@@ -591,7 +586,6 @@ async function receiveHostedDrop() {
     updateTimer();
     pollDropInfo();
 
-    // Listen for changes to the timer setting and update timer live
     const detailedTimerCheckbox = document.getElementById('settings-detailed-timer');
     if (detailedTimerCheckbox) {
         detailedTimerCheckbox.addEventListener('change', () => {

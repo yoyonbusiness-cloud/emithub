@@ -3,7 +3,6 @@
 
 <head>
     <script>
-        // Clear all P2P-related session/localStorage keys on hosted drop page load
         (function () {
             const p2pKeys = [
                 'ys_workspace', 'ys_guard', 'ys_is_creator',
@@ -15,7 +14,6 @@
                 try { localStorage.removeItem(k); } catch (e) { }
                 try { sessionStorage.removeItem(k); } catch (e) { }
             });
-            // Remove any workspace/guard from URL if present
             if (window.location.search.includes('workspace=')) {
                 const url = new URL(window.location.href);
                 url.searchParams.delete('workspace');
@@ -593,7 +591,7 @@
                         <i class="fa-brands fa-paypal"></i>
                         Donate
                     </a>
-                    <a href="https://github.com/yoyonbusiness-cloud/YOUShare.git" target="_blank" rel="noopener"
+                    <a href="https://github.com/yoyonbusiness-cloud/emithub.git" target="_blank" rel="noopener"
                         title="GitHub" class="social-icon">
                         <i class="fa-brands fa-github"></i>
                     </a>
@@ -614,8 +612,6 @@
         const params = new URLSearchParams(window.location.search);
         const dropToken = params.get('t') || (window.location.pathname.startsWith('/h/') ? window.location.pathname.split('/')[2] : null);
         let dropDeletedShown = false;
-        // Auto-join logic removed: opening a drop link/tab will NOT join the P2P room or trigger 'came back' logic.
-        // Only the activity tracker should join/track rooms.
 
         function showDropDeletedState() {
             if (dropDeletedShown) return;

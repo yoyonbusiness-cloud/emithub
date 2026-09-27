@@ -1,5 +1,3 @@
-// Final fix appended to webrtc.js
-// Add missing initiatePeerConnection function
 if (typeof initiatePeerConnection === 'undefined') {
     window.initiatePeerConnection = async function(targetId) {
         console.log('FIX: Initiating peer connection to', targetId);
@@ -10,7 +8,6 @@ if (typeof initiatePeerConnection === 'undefined') {
         
         const peer = peers[targetId];
         
-        // Close existing connection
         if (peer.pc) {
             try { peer.pc.close(); } catch (e) {}
             peer.pc = null;
@@ -18,14 +15,12 @@ if (typeof initiatePeerConnection === 'undefined') {
             peer.channel = null;
         }
         
-        // Create new connection
         const pc = new RTCPeerConnection({
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         });
         
         peer.pc = pc;
         
-        // Create data channel
         const dc = pc.createDataChannel('fileTransfer', { ordered: true });
         
         dc.onopen = () => {
@@ -52,7 +47,6 @@ if (typeof initiatePeerConnection === 'undefined') {
             }
         };
         
-        // Create and send offer
         try {
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);

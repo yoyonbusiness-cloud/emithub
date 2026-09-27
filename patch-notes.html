@@ -32,7 +32,6 @@
             overflow-x: hidden;
         }
 
-        /* ── NAV ── */
         .pn-nav {
             position: sticky;
             top: 0;
@@ -67,7 +66,6 @@
             gap: 0.75rem;
         }
 
-        /* ── HERO ── */
         .pn-hero {
             max-width: 860px;
             margin: 0 auto;
@@ -129,7 +127,6 @@
 
         .pn-date-line i { font-size: 0.75rem; }
 
-        /* ── DIVIDER ── */
         .pn-divider {
             max-width: 860px;
             margin: 0 auto;
@@ -155,7 +152,6 @@
             white-space: nowrap;
         }
 
-        /* ── GRID ── */
         .pn-grid {
             max-width: 860px;
             margin: 0 auto;
@@ -169,7 +165,6 @@
             .pn-grid { grid-template-columns: 1fr; }
         }
 
-        /* ── CARD ── */
         .pn-card {
             background: var(--card-surface);
             border: 1px solid var(--card-border);
@@ -210,7 +205,6 @@
             .pn-card--wide { grid-column: span 1; }
         }
 
-        /* card color accents */
         .pn-card--green  { --card-glow: rgba(16,185,129,0.08); }
         .pn-card--blue   { --card-glow: rgba(59,130,246,0.08); }
         .pn-card--purple { --card-glow: rgba(139,92,246,0.08); }
@@ -220,7 +214,6 @@
         .pn-card--indigo { --card-glow: rgba(99,102,241,0.08); }
         .pn-card--slate  { --card-glow: rgba(148,163,184,0.08); }
 
-        /* ── CARD ICON ── */
         .pn-card-icon {
             width: 44px;
             height: 44px;
@@ -240,7 +233,6 @@
         .pn-card-icon--indigo { background: rgba(99,102,241,0.12); color: #818cf8; border: 1px solid rgba(99,102,241,0.2); }
         .pn-card-icon--slate  { background: rgba(148,163,184,0.12); color: #94a3b8; border: 1px solid rgba(148,163,184,0.2); }
 
-        /* ── CARD HEADER ── */
         .pn-card-head {
             display: flex;
             align-items: center;
@@ -279,14 +271,12 @@
         .pn-card-tag--privacy { background: rgba(251,191,36,0.12); color: #fbbf24; }
         .pn-card-tag--perf    { background: rgba(6,182,212,0.12); color: #22d3ee; }
 
-        /* ── CARD BODY ── */
         .pn-card-desc {
             font-size: 0.86rem;
             color: var(--text-secondary);
             line-height: 1.65;
         }
 
-        /* ── SHORTCUT PILLS ── */
         .pn-shortcuts {
             display: flex;
             flex-wrap: wrap;
@@ -325,7 +315,6 @@
             color: var(--text-pure);
         }
 
-        /* ── THEME SWATCHES ── */
         .pn-swatches {
             display: flex;
             gap: 0.5rem;
@@ -359,7 +348,6 @@
             background: conic-gradient(#ff6b6b, #feca57, #48dbfb, #ff9ff3, #ff6b6b);
         }
 
-        /* ── SPEED GRAPH DEMO ── */
         .pn-graph-demo {
             height: 64px;
             background: var(--card-elevated);
@@ -385,7 +373,6 @@
             letter-spacing: 0.05em;
         }
 
-        /* ── RESUME PROGRESS ── */
         .pn-resume-bar {
             height: 6px;
             background: var(--card-elevated);
@@ -426,7 +413,6 @@
 
         .pn-resume-meta span:last-child { color: #10b981; }
 
-        /* ── FOOTER ── */
         .pn-footer {
             border-top: 1px solid var(--card-border);
             padding: 2rem;
@@ -445,7 +431,6 @@
             font-weight: 700;
         }
 
-        /* animate graph line */
         @keyframes graph-draw {
             from { stroke-dashoffset: 400; }
             to   { stroke-dashoffset: 0; }
@@ -466,7 +451,6 @@
             animation: pulse-dot 1.8s ease-in-out infinite;
         }
 
-        /* stealth strip animation */
         @keyframes strip-scan {
             0%   { transform: translateX(-100%); }
             100% { transform: translateX(400%); }

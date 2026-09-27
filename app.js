@@ -734,7 +734,7 @@ function initNearbyDiscoveryClient() {
                         const totalCollectionSize = files.reduce((acc, f) => acc + (f.size || 0), 0);
                         const collectionBlob = new Blob([JSON.stringify({ name: `${files.length} Files`, files: uploadedFiles })], { type: 'application/json' });
                         const collectionFile = new File([collectionBlob], 'workspace.json', { type: 'application/json' });
-                        dropResult = await window.hostedDrop(collectionFile, () => {}, 60 * 60 * 1000, `${files.length} Files`, { isCollection: true, totalSize: totalCollectionSize, displayName: `${files.length} Files` });
+                        dropResult = await window.hostedDrop(collectionFile, () => { }, 60 * 60 * 1000, `${files.length} Files`, { isCollection: true, totalSize: totalCollectionSize, displayName: `${files.length} Files` });
                     } else {
                         _setProgress(file.name, 0, 'Encrypting & uploading...');
                         dropResult = await window.hostedDrop(file, (phase, pct) => {
@@ -1013,7 +1013,8 @@ function getHostedModalElements() {
         timedWindowCheckbox: document.getElementById('timed-window-checkbox'),
         timedWindowInputs: document.getElementById('timed-window-inputs'),
         timedWindowStart: document.getElementById('timed-window-start'),
-        timedWindowEnd: document.getElementById('timed-window-end')
+        timedWindowEnd: document.getElementById('timed-window-end'),
+        modalDesc: document.getElementById('drop-modal-desc')
     };
 }
 
@@ -1214,9 +1215,15 @@ document.addEventListener('DOMContentLoaded', () => {
     initCustomTimePickers();
     const timedCb = document.getElementById('timed-window-checkbox');
     const timedInputs = document.getElementById('timed-window-inputs');
+    const modalDesc = document.getElementById('drop-modal-desc');
     if (timedCb && timedInputs) {
         timedCb.addEventListener('change', () => {
             timedInputs.style.display = timedCb.checked ? 'flex' : 'none';
+            if (modalDesc) {
+                modalDesc.textContent = timedCb.checked
+                    ? 'Choose delay for Hosted Link (max 4h active window, expires in 3 days).'
+                    : 'Choose delay for Hosted Link (max 48h).';
+            }
         });
     }
 });
@@ -1334,6 +1341,8 @@ function closeHostedModal({ reset = true, clearActiveState = false } = {}) {
     if (zipCheckbox) zipCheckbox.checked = false;
     if (zipNameArea) zipNameArea.style.display = 'none';
     if (zipNameInput) zipNameInput.value = '';
+    const descEl = document.getElementById('drop-modal-desc');
+    if (descEl) descEl.textContent = 'Choose delay for Hosted Link (max 48h).';
 }
 
 function openHostedModal() {
@@ -1452,8 +1461,21 @@ async function startHostedUpload(files) {
     const canaryPing = isYoyon && !!canaryCheckbox?.checked;
     const decoyTrap = isYoyon && !!decoyCheckbox?.checked;
     const timedWindowEnabled = !!timedWindowCheckbox?.checked;
-    const accessWindowStart = timedWindowEnabled ? (timedWindowStart?.value || '') : '';
-    const accessWindowEnd = timedWindowEnabled ? (timedWindowEnd?.value || '') : '';
+    let accessWindowStart = timedWindowEnabled ? (timedWindowStart?.value || '') : '';
+    let accessWindowEnd = timedWindowEnabled ? (timedWindowEnd?.value || '') : '';
+    if (timedWindowEnabled && accessWindowStart && accessWindowEnd) {
+        const [sh, sm] = accessWindowStart.split(':').map(Number);
+        const [eh, em] = accessWindowEnd.split(':').map(Number);
+        if (!isNaN(sh) && !isNaN(sm) && !isNaN(eh) && !isNaN(em)) {
+            const startMins = sh * 60 + sm;
+            let endMins = eh * 60 + em;
+            if (endMins < startMins) endMins += 24 * 60;
+            if (endMins - startMins > 240) {
+                showToast('Window Too Long', 'Timed window cannot exceed 4 hours.', 'warning');
+                return;
+            }
+        }
+    }
     const dropOptions = { burnOnDownload, canaryPing, decoyTrap, accessWindowStart, accessWindowEnd };
 
     const token = createHostedClientToken();
@@ -1688,7 +1710,6 @@ if (ui.buttons.cancelShare) {
         if (ui.panels.share) ui.panels.share.style.display = 'none';
         if (ui.panels.actionSelection) {
             ui.panels.actionSelection.style.display = '';
-            // Trigger a refresh of the public room lists
             if (typeof socket !== 'undefined' && socket.emit) {
                 socket.emit('list-public-rooms');
             }
@@ -1703,7 +1724,6 @@ if (ui.buttons.cancelJoin) {
         if (ui.panels.join) ui.panels.join.style.display = 'none';
         if (ui.panels.actionSelection) {
             ui.panels.actionSelection.style.display = '';
-            // Trigger a refresh of the public room lists
             if (typeof socket !== 'undefined' && socket.emit) {
                 socket.emit('list-public-rooms');
             }
@@ -2536,7 +2556,6 @@ if (ui.buttons.promptSecretSubmit) {
         window._secretPromptAttempted = true;
         ui.panels.secretPromptModal.style.display = 'none';
         if (typeof window._pendingWorkspaceId !== 'undefined' && window._pendingWorkspaceId) {
-            // Always retry as participant (never creator) after secret-mismatch
             if (typeof joinRoom === 'function') joinRoom(window._pendingWorkspaceId, secret, false);
         }
     });
@@ -3492,14 +3511,13 @@ window.renderTabsUI = function () {
         const isActive = tabId === window.activeTabId;
         const isHome = tabId === 'home';
         html += `
-            <div class="emit-tab ${isActive ? 'active' : ''}" onclick="window.switchTab('${tabId}')">
+            <div class="emit-tab ${isActive ? 'active' : ''}" onclick="window.switchTab('${tabId}')" title="${state.name}">
                 <i class="fa-solid ${isHome ? 'fa-house' : 'fa-network-wired'}"></i>
                 <span>${state.name}</span>
-                ${!isHome ? `<i class="fa-solid fa-xmark emit-tab-close" onclick="event.stopPropagation(); window.closeTab('${tabId}')"></i>` : ''}
+                ${!isHome ? `<i class="fa-solid fa-xmark emit-tab-close" onclick="event.stopPropagation(); window.closeTab('${tabId}')" title="Close Room"></i>` : ''}
             </div>
         `;
     }
-    // Search / command palette tab
     html += `
         <div class="emit-tab" id="search-palette-btn" onclick="window.openCommandPalette()" title="Search actions & shortcuts..." style="opacity: 0.75; display: flex; align-items: center; gap: 0.35rem; border: 1px dashed rgba(255,255,255,0.15); background: rgba(255,255,255,0.02);">
             <i class="fa-solid fa-magnifying-glass" style="font-size: 0.82rem;"></i>
@@ -3507,6 +3525,19 @@ window.renderTabsUI = function () {
         </div>
     `;
     tabsBar.innerHTML = html;
+    const activeTab = tabsBar.querySelector('.emit-tab.active');
+    if (activeTab && typeof activeTab.scrollIntoView === 'function') {
+        activeTab.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+    }
+    if (!tabsBar._hasWheelHandler) {
+        tabsBar.addEventListener('wheel', (e) => {
+            if (e.deltaY !== 0) {
+                e.preventDefault();
+                tabsBar.scrollLeft += e.deltaY;
+            }
+        }, { passive: false });
+        tabsBar._hasWheelHandler = true;
+    }
 };
 
 window.updateTabDOM = function (tabId, elementId, callback) {
@@ -3874,7 +3905,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Command Palette Logic
     const cpModal = document.getElementById('command-palette-modal');
     const cpInput = document.getElementById('command-palette-input');
     const cpResults = document.getElementById('command-palette-results');
@@ -3887,7 +3917,65 @@ document.addEventListener('DOMContentLoaded', () => {
     let cpFilteredCommands = [];
     let currentPendingAction = null;
 
+    function startP2PRoomSendFlow() {
+        const picker = document.getElementById('file-input');
+        if (!picker) return;
+        const tempHandler = async (e) => {
+            picker.removeEventListener('change', tempHandler);
+            if (!e.target.files || !e.target.files.length) return;
+            const selectedFiles = Array.from(e.target.files);
+            const activePeers = (typeof peers !== 'undefined' && peers) ? Object.values(peers).filter(p => !p.isShadowTab) : [];
+            if (activePeers.length > 0 && typeof handleFiles === 'function') {
+                handleFiles(selectedFiles, activePeers);
+                return;
+            }
+            const autoCode = typeof generateSecureWorkspaceId === 'function' ? generateSecureWorkspaceId() : Math.random().toString(36).substring(2, 8).toUpperCase();
+            if (typeof joinRoom === 'function') {
+                joinRoom(autoCode, '', true, true);
+            }
+            const shareUrl = `${window.location.origin}/?workspace=${autoCode}`;
+            if (typeof window.copyToClipboard === 'function') {
+                window.copyToClipboard(shareUrl).then(() => {
+                    showToast('Room Created & Copied', `Created room ${autoCode}. Link copied! Transfer will begin when peer connects.`, 'success');
+                }).catch(() => {
+                    showToast('Room Created', `Created room ${autoCode}. Transfer will begin when peer connects.`, 'success');
+                });
+            } else {
+                showToast('Room Created', `Created room ${autoCode}. Transfer will begin when peer connects.`, 'success');
+            }
+            let checkCount = 0;
+            const interval = setInterval(() => {
+                checkCount++;
+                const currentPeers = (typeof peers !== 'undefined' && peers) ? Object.values(peers).filter(p => !p.isShadowTab) : [];
+                if (currentPeers.length > 0) {
+                    clearInterval(interval);
+                    if (typeof handleFiles === 'function') {
+                        handleFiles(selectedFiles, currentPeers);
+                        showToast('Transfer Started', 'Peer connected. Sending files...', 'success');
+                    }
+                } else if (checkCount > 120) {
+                    clearInterval(interval);
+                }
+            }, 1000);
+        };
+        picker.addEventListener('change', tempHandler);
+        picker.value = '';
+        picker.click();
+    }
+    window.startP2PRoomSendFlow = startP2PRoomSendFlow;
+
     const cpCommands = [
+        {
+            id: 'send-p2p',
+            title: 'Send via P2P (Direct Encrypted)',
+            desc: 'Stream files peer-to-peer with zero server storage',
+            icon: 'fa-paper-plane',
+            shortcut: 'Send',
+            action: () => {
+                window.closeCommandPalette();
+                startP2PRoomSendFlow();
+            }
+        },
         {
             id: 'create-vault',
             title: 'Create Vault',
@@ -4249,7 +4337,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Check if query looks like a P2P code or hosted link
         const cleanCode = query.toUpperCase().replace(/[^A-Z0-9-]/g, '');
         const looksLikeP2PCode = (cleanCode.length === 9 && cleanCode.includes('-')) || (cleanCode.length === 8);
         const looksLikeHostedLink = query.includes('/h/') || query.match(/[a-zA-Z0-9_-]{10,}/);
@@ -4394,9 +4481,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Global Key Listener for Cmd Palette
     window.addEventListener('keydown', (e) => {
-        // Toggle with Ctrl + K or slash (/) if not inside input/textarea fields
         const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
         const key = e.key.toLowerCase();
 

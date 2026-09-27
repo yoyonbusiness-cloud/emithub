@@ -22,8 +22,8 @@ Emit
 **Requirements:** Node.js 18+
 
 ```bash
-git clone https://github.com/yoyonbusiness-cloud/YOUShare.git
-cd YOUShare
+git clone https://github.com/yoyonbusiness-cloud/emithub.git
+cd emithub
 npm install
 npm start
 ```

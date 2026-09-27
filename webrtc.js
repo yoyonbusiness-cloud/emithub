@@ -1,4 +1,3 @@
-// Hosted Resume Modal Logic (restored)
 window.showHostedResumeModal = function (token, filenames, onResume) {
     let modal = document.getElementById('hosted-resume-modal');
     if (!modal) {
@@ -32,7 +31,6 @@ window.showHostedResumeModal = function (token, filenames, onResume) {
 };
 
 
-// Hosted upload resume modal logic (restored)
 window.checkAndShowHostedResume = function (token, file, onResume) {
     const resumeState = window.loadHostedResumeState(token);
     if (!resumeState) return false;
@@ -2173,12 +2171,10 @@ socket.on('peer-list', async (peerList) => {
     }
     const otherPeers = peerList.filter(p => p.id !== socket.id);
 
-    // **SEAMLESS RECONNECT HANDOFF**: Preserve connections during socket ID changes
     const peersToPreserveState = {}; // oldId -> { pc, dc, name, ecdhKey, ... }
 
     otherPeers.forEach(p => {
         if (p.persistentId) {
-            // Look for a peer with same persistentId but different socket ID (reconnect case)
             const oldPeerId = Object.keys(peers).find(id =>
                 peers[id].persistentId === p.persistentId && id !== p.id
             );
@@ -2210,7 +2206,6 @@ socket.on('peer-list', async (peerList) => {
                     }
                 }
 
-                // Update transfer references to new socket ID
                 for (const [fId, meta] of Object.entries(activeReceives)) {
                     if (meta.senderId === oldPeerId) {
                         meta.senderId = p.id;
@@ -2224,17 +2219,14 @@ socket.on('peer-list', async (peerList) => {
                     }
                 }
 
-                // Clean up only the old socket ID reference, not the connection itself
                 delete peers[oldPeerId];
             }
         }
     });
 
-    // Build new peers map while preserving connections from reconnects
     const newPeers = {};
     otherPeers.forEach(p => {
         if (peersToPreserveState[p.id]) {
-            // Reconnect: preserve the connection state
             newPeers[p.id] = {
                 id: p.id,
                 name: p.name,
@@ -2249,14 +2241,12 @@ socket.on('peer-list', async (peerList) => {
             };
             auditLog(`Peer ${p.id.substring(0, 6)} seamlessly reconnected - connection preserved`);
         } else if (peers[p.id]) {
-            // Existing peer, keep as-is
             newPeers[p.id] = peers[p.id];
             newPeers[p.id].name = p.name;
             newPeers[p.id].persistentId = p.persistentId;
             newPeers[p.id].isOfferer = shouldBeOfferer(p.id);
             newPeers[p.id].reconnecting = p.reconnecting || false;
         } else {
-            // New peer, create fresh
             newPeers[p.id] = {
                 id: p.id,
                 name: p.name,
@@ -2272,7 +2262,6 @@ socket.on('peer-list', async (peerList) => {
     });
 
 
-    // Close only peers that are truly leaving (not in new list)
     Object.keys(peers).forEach(id => {
         if (!newPeers[id]) {
             if (peers[id].pc) {
@@ -2292,7 +2281,6 @@ socket.on('peer-list', async (peerList) => {
         ActivityTracker.updateP2PRoom(curId, peerNames);
     }
 
-    // Post-reconnect fixup: if DC is open, trigger transfer resumption for new peer ID
     for (const [newPeerId, preservedState] of Object.entries(peersToPreserveState)) {
         const preservedChannel = preservedState.dc || preservedState.channel;
         if (preservedChannel && preservedChannel.readyState === 'open') {
@@ -2302,7 +2290,6 @@ socket.on('peer-list', async (peerList) => {
                     socket.emit('ecdh-public-key', jwk, signalingId, newPeerId);
                 }).catch(() => { });
             }
-            // DC is open after reconnect - manually resume transfers targeting new peer
             for (const [fId, sendState] of Object.entries(activeSends)) {
                 if (sendState.targetId === newPeerId && sendState.paused && !sendState.aborted) {
                     resumeSendFile(fId, newPeerId);
@@ -2362,7 +2349,6 @@ socket.on('user-left', (leftPeerId, reason) => {
     if (peers[leftPeerId]) {
         peerName = peers[leftPeerId].name;
         if (reason === 'reconnect') {
-            // **SEAMLESS RECONNECT**: Mark as reconnecting but preserve state
             peers[leftPeerId].reconnecting = true;
             const statusEl = document.getElementById(`peer-status-${leftPeerId}`);
             if (statusEl) {
@@ -2370,10 +2356,8 @@ socket.on('user-left', (leftPeerId, reason) => {
                 statusEl.style.color = 'var(--text-warning)';
             }
             auditLog(`Peer ${peerName} (${leftPeerId.substring(0, 6)}) disconnected - awaiting reconnect...`);
-            // DON'T delete the peer or clean up transfers - they will resume when reconnect completes
             return;
         } else {
-            // Actual disconnect: delete peer completely
             if (peers[leftPeerId].pc) {
                 try { peers[leftPeerId].pc.close(); } catch (e) { }
             }
@@ -2391,7 +2375,6 @@ socket.on('user-left', (leftPeerId, reason) => {
 
     updatePeerListUI();
 
-    // Only clean up transfers for actual disconnects, not reconnects
     const shouldPreserveTransferRows = reason === 'reconnect' || Object.keys(loadP2PResumeState()).length > 0 || Object.keys(loadP2PSendResumeState()).length > 0;
     if (!shouldPreserveTransferRows) {
         const item = document.getElementById(`peer-item-${leftPeerId}`);
@@ -3776,11 +3759,9 @@ async function finalizeDownload(fileId) {
                     const g = imgData[i + 1];
                     const b = imgData[i + 2];
 
-                    // RGB check
                     const passesRGB = r > 95 && g > 40 && b > 20 && (Math.max(r, g, b) - Math.min(r, g, b) > 15) && Math.abs(r - g) > 15 && r > g && r > b;
 
                     if (passesRGB) {
-                        // Convert to HSL for precise Hue check (skin is typically 0-50 degrees)
                         const rNorm = r / 255;
                         const gNorm = g / 255;
                         const bNorm = b / 255;
@@ -4335,7 +4316,6 @@ document.addEventListener('DOMContentLoaded', () => {
         attemptRestorePersistedTransfers();
     }, 150);
 
-    // Initialization logic for zip bundle toggle
     const zipCheck = document.getElementById('zip-bundle-checkbox');
     const zipArea = document.getElementById('zip-name-area');
     if (zipCheck && zipArea) {
@@ -4470,7 +4450,6 @@ window.restoreHostedTransferUI = async function (token, state) {
     }
 };
 
-// IndexedDB Helper for Hosted File Caching
 const DB_NAME = 'EmitHostedCacheV2';
 const STORE_NAME = 'files';
 const P2P_SEND_CACHE_STORE = 'p2p-send-files';

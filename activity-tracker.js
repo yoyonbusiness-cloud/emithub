@@ -239,9 +239,7 @@ const ActivityTracker = {
     });
   },
 
-  // Force a complete refresh of the activity tracker
   forceRefresh() {
-    // Clear and reload from localStorage
     try {
       const saved = JSON.parse(localStorage.getItem('emit-hosted-links') || '{}');
       this.state.hostedLinks = saved;
@@ -269,7 +267,6 @@ const ActivityTracker = {
       } else {
         const el = document.getElementById(`hosted-time-${token}`);
         if (el) {
-          // Always use the latest timer formatting setting from localStorage
           if (window.uiShared && typeof window.uiShared.formatExpiryCountdown === 'function') {
             el.textContent = 'Expires in ' + window.uiShared.formatExpiryCountdown(timeLeft);
           } else {
@@ -895,7 +892,6 @@ const ActivityTracker = {
     const link = this.state.hostedLinks[token];
     if (!link) return;
 
-    // Set as active so restore logic knows what to do
     localStorage.setItem('emit-active-hosted-token', token);
     localStorage.setItem('emit-active-hosted-state', link.status === 'ready' ? 'finished' : 'active');
     if (link.url) localStorage.setItem('emit-active-hosted-url', link.url);
