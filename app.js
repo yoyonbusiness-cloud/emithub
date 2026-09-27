@@ -612,8 +612,9 @@ function initNearbyDiscoveryClient() {
             const checkAndSend = () => {
                 attempts++;
                 const peerArray = (typeof peers !== 'undefined') ? Object.values(peers) : [];
-                if (peerArray.length > 0 && typeof handleFiles === 'function') {
-                    handleFiles(filesToSend);
+                const sendFn = (typeof handleFiles === 'function') ? handleFiles : (typeof window !== 'undefined' ? window.handleFiles : null);
+                if (peerArray.length > 0 && typeof sendFn === 'function') {
+                    sendFn(filesToSend);
                 } else if (attempts < 60) {
                     setTimeout(checkAndSend, 500);
                 } else {

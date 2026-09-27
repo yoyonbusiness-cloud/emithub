@@ -3433,6 +3433,7 @@ async function handleFiles(files) {
         doSend();
     }
 }
+window.handleFiles = handleFiles;
 
 window.resumeHostedDrop = async function (files, token) {
     const modal = document.getElementById('drop-modal');
