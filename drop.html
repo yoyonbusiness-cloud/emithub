@@ -13,7 +13,6 @@
             p2pKeys.forEach(k => {
                 try { localStorage.removeItem(k); } catch (e) { }
                 try { sessionStorage.removeItem(k); } catch (e) { }
-            });
             if (window.location.search.includes('workspace=')) {
                 const url = new URL(window.location.href);
                 url.searchParams.delete('workspace');
@@ -514,10 +513,6 @@
                 <i class="fa-solid fa-arrow-down"></i>
                 Download
             </button>
-            <button id="drop-direct-disk-btn" class="btn-download" style="margin-top: 0.65rem; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--accent-emerald); display: none;">
-                <i class="fa-solid fa-hard-drive"></i>
-                Direct-to-Disk Stream
-            </button>
 
             <div id="collection-list" class="collection-list" style="display:none;">
                 <div class="collection-header">
@@ -1000,11 +995,13 @@
             const settingsSave = document.getElementById('settings-save');
             const audioCheck = document.getElementById('settings-audio');
             const timerCheck = document.getElementById('settings-detailed-timer');
+            const directDiskCheck = document.getElementById('settings-direct-disk');
 
             if (settingsBtn) {
                 settingsBtn.onclick = () => {
                     audioCheck.checked = localStorage.getItem('emit-audio') !== 'false';
                     timerCheck.checked = localStorage.getItem('emit-detailed-timer') === 'true';
+                    if (directDiskCheck) directDiskCheck.checked = localStorage.getItem('emit-direct-disk') === 'true';
                     settingsModal.style.display = 'flex';
                 };
             }
@@ -1013,8 +1010,14 @@
                 settingsSave.onclick = () => {
                     localStorage.setItem('emit-audio', audioCheck.checked);
                     localStorage.setItem('emit-detailed-timer', timerCheck.checked);
+                    if (directDiskCheck) localStorage.setItem('emit-direct-disk', directDiskCheck.checked ? 'true' : 'false');
                     settingsModal.style.display = 'none';
                     if (typeof showToast === 'function') showToast('Saved', 'Preferences updated.', 'success');
+                };
+            }
+            if (directDiskCheck) {
+                directDiskCheck.onchange = () => {
+                    localStorage.setItem('emit-direct-disk', directDiskCheck.checked ? 'true' : 'false');
                 };
             }
 

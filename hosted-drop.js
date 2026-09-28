@@ -592,18 +592,6 @@ async function receiveHostedDrop() {
             updateTimer();
         });
     }
-    const directDiskCheckbox = document.getElementById('settings-direct-disk');
-    if (directDiskCheckbox) {
-        directDiskCheckbox.checked = localStorage.getItem('emit-direct-disk') === 'true';
-        directDiskCheckbox.addEventListener('change', () => {
-            localStorage.setItem('emit-direct-disk', directDiskCheckbox.checked ? 'true' : 'false');
-        });
-    }
-    const canStreamToDiskInit = typeof window.showSaveFilePicker === 'function';
-    const directDiskBtnInit = document.getElementById('drop-direct-disk-btn');
-    if (directDiskBtnInit) {
-        directDiskBtnInit.style.display = canStreamToDiskInit ? 'inline-flex' : 'none';
-    }
     window.addEventListener('storage', (e) => {
         if (e.key === 'ys_detailed_timer') {
             updateTimer();
@@ -612,6 +600,14 @@ async function receiveHostedDrop() {
             directDiskCheckbox.checked = e.newValue === 'true';
         }
     });
+
+    const directDiskCheckbox = document.getElementById('settings-direct-disk');
+    if (directDiskCheckbox) {
+        directDiskCheckbox.checked = localStorage.getItem('emit-direct-disk') === 'true';
+        directDiskCheckbox.addEventListener('change', () => {
+            localStorage.setItem('emit-direct-disk', directDiskCheckbox.checked ? 'true' : 'false');
+        });
+    }
 
     const isLargeChunked = isChunked && meta.size > MEMORY_SAFE_DOWNLOAD_MAX_BYTES;
     if (isLargeChunked) {
@@ -684,7 +680,7 @@ async function receiveHostedDrop() {
                     downloadBtn.innerHTML = `<i class="fa-solid fa-arrow-down"></i> Download All (${totalFilesCount} Files)`;
                 }
 
-                async function downloadCollectionItem(file, onProgress) {
+                async function downloadCollectionItem(file, onProgress, targetWritable = null) {
                     const fileUrl = new URL(file.url, window.location.origin);
                     let fileToken = file.token || fileUrl.searchParams.get('t');
                     if (!fileToken) {
@@ -719,10 +715,29 @@ async function receiveHostedDrop() {
                     if (!fileInfoResp.ok) throw new Error('File expired or not found');
                     const fileMeta = await fileInfoResp.json();
 
-                    let fileBlob;
+                    const canStreamToDisk = typeof window.showSaveFilePicker === 'function';
+                    const isDirectDisk = (targetWritable !== null) || (canStreamToDisk && (localStorage.getItem('emit-direct-disk') === 'true' || (fileMeta.size && fileMeta.size > MEMORY_SAFE_DOWNLOAD_MAX_BYTES)));
+
+                    let writable = targetWritable;
+                    let ownsWritable = false;
+
+                    if (!writable && isDirectDisk && canStreamToDisk) {
+                        try {
+                            const handle = await window.showSaveFilePicker({ suggestedName: fileMeta.filename || file.name || 'download' });
+                            writable = await handle.createWritable();
+                            ownsWritable = true;
+                        } catch (err) {
+                            if (err.name === 'AbortError') {
+                                throw err;
+                            }
+                            console.warn('File picker failed, falling back to memory blob', err);
+                            writable = null;
+                        }
+                    }
+
                     if (fileMeta.mode === 'chunked' && fileMeta.chunkCount) {
                         const fIvPrefix4 = b64ToUint8(fileIvB64);
-                        const fParts = [];
+                        const fParts = writable ? null : [];
                         for (let fi = 0; fi < fileMeta.chunkCount; fi++) {
                             if (onProgress) onProgress(fi + 1, fileMeta.chunkCount);
                             const fResp = await fetch(`/download-chunk/${fileToken}/${fi}`);
@@ -730,9 +745,27 @@ async function receiveHostedDrop() {
                             const fCipherBuf = await fResp.arrayBuffer();
                             const fIv = deriveChunkIv(fIvPrefix4, fi);
                             const fPlain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fIv }, fileKey, fCipherBuf);
-                            fParts.push(new Blob([fPlain]));
+                            if (writable) {
+                                await writable.write(new Uint8Array(fPlain));
+                            } else {
+                                fParts.push(new Blob([fPlain]));
+                            }
                         }
-                        fileBlob = new Blob(fParts);
+                        if (writable && ownsWritable) {
+                            await writable.close();
+                        } else if (!writable) {
+                            const fileBlob = new Blob(fParts);
+                            const fA = document.createElement('a');
+                            const blobUrl = URL.createObjectURL(fileBlob);
+                            fA.href = blobUrl;
+                            fA.download = fileMeta.filename || file.name || 'download';
+                            document.body.appendChild(fA);
+                            fA.click();
+                            setTimeout(() => {
+                                fA.remove();
+                                URL.revokeObjectURL(blobUrl);
+                            }, 20000);
+                        }
                     } else {
                         if (onProgress) onProgress(1, 1);
                         const fResp = await fetch(`/download/${fileToken}`);
@@ -741,25 +774,56 @@ async function receiveHostedDrop() {
                         const fIv = new Uint8Array(fPackedBuf, 0, 12);
                         const fCipher = fPackedBuf.slice(12);
                         const fPlain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fIv }, fileKey, fCipher);
-                        fileBlob = new Blob([fPlain]);
+                        if (writable) {
+                            await writable.write(new Uint8Array(fPlain));
+                            if (ownsWritable) await writable.close();
+                        } else {
+                            const fileBlob = new Blob([fPlain]);
+                            const fA = document.createElement('a');
+                            const blobUrl = URL.createObjectURL(fileBlob);
+                            fA.href = blobUrl;
+                            fA.download = fileMeta.filename || file.name || 'download';
+                            document.body.appendChild(fA);
+                            fA.click();
+                            setTimeout(() => {
+                                fA.remove();
+                                URL.revokeObjectURL(blobUrl);
+                            }, 20000);
+                        }
                     }
-
-                    const fA = document.createElement('a');
-                    const blobUrl = URL.createObjectURL(fileBlob);
-                    fA.href = blobUrl;
-                    fA.download = fileMeta.filename || file.name || 'download';
-                    document.body.appendChild(fA);
-                    fA.click();
-                    setTimeout(() => {
-                        fA.remove();
-                        URL.revokeObjectURL(blobUrl);
-                    }, 20000);
                 }
 
                 let isDownloadingAll = false;
                 async function downloadAllCollectionFiles() {
                     if (isDownloadingAll) return;
                     isDownloadingAll = true;
+
+                    const canStreamToDisk = typeof window.showSaveFilePicker === 'function';
+                    const canPickDir = typeof window.showDirectoryPicker === 'function';
+                    const isDirectDisk = canStreamToDisk && (localStorage.getItem('emit-direct-disk') === 'true' || totalCalculatedBytes > MEMORY_SAFE_DOWNLOAD_MAX_BYTES);
+
+                    let dirHandle = null;
+                    if (isDirectDisk && canPickDir) {
+                        if (statusEl) statusEl.textContent = 'Please choose destination folder for direct disk streaming...';
+                        try {
+                            dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                        } catch (err) {
+                            if (err.name === 'AbortError') {
+                                isDownloadingAll = false;
+                                if (downloadBtn) {
+                                    downloadBtn.disabled = false;
+                                    downloadBtn.innerHTML = `<i class="fa-solid fa-arrow-down"></i> Download All (${totalFilesCount} Files)`;
+                                }
+                                if (dlAllHeaderBtn) {
+                                    dlAllHeaderBtn.disabled = false;
+                                    dlAllHeaderBtn.innerHTML = '<i class="fa-solid fa-download"></i> Download All';
+                                }
+                                if (statusEl) statusEl.textContent = 'Download cancelled.';
+                                return;
+                            }
+                            console.warn('Directory picker failed, proceeding with standard downloads', err);
+                        }
+                    }
 
                     if (downloadBtn) {
                         downloadBtn.disabled = true;
@@ -792,13 +856,28 @@ async function receiveHostedDrop() {
                             dlBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
                         }
 
+                        let targetWritable = null;
+                        if (dirHandle) {
+                            try {
+                                const fileHandle = await dirHandle.getFileHandle(file.name, { create: true });
+                                targetWritable = await fileHandle.createWritable();
+                            } catch (e) {
+                                console.warn('Could not create file handle in directory:', e);
+                            }
+                        }
+
                         try {
                             await downloadCollectionItem(file, (part, total) => {
                                 if (total > 1) {
                                     if (dlBtn) dlBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${part}/${total}`;
                                     if (downloadBtn) downloadBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> File ${i + 1}/${totalFiles} (${part}/${total})`;
                                 }
-                            });
+                            }, targetWritable);
+
+                            if (targetWritable) {
+                                try { await targetWritable.close(); } catch {}
+                            }
+
                             if (dlBtn) {
                                 dlBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
                                 dlBtn.style.background = 'var(--accent-emerald)';
@@ -806,6 +885,9 @@ async function receiveHostedDrop() {
                             successCount++;
                             if (typeof playProceduralSound === 'function') playProceduralSound('pop');
                         } catch (err) {
+                            if (targetWritable) {
+                                try { await targetWritable.close(); } catch {}
+                            }
                             if (dlBtn) {
                                 dlBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
                                 dlBtn.style.background = 'var(--accent-red, #ef4444)';
@@ -820,7 +902,7 @@ async function receiveHostedDrop() {
 
                     if (downloadBtn) {
                         if (successCount === totalFiles) {
-                            downloadBtn.innerHTML = '<i class="fa-solid fa-check"></i> All Files Downloaded';
+                            downloadBtn.innerHTML = `<i class="fa-solid fa-check"></i> All Files ${dirHandle ? 'Saved to Disk' : 'Downloaded'}`;
                             downloadBtn.style.background = 'var(--accent-emerald)';
                         } else {
                             downloadBtn.disabled = false;
@@ -838,7 +920,7 @@ async function receiveHostedDrop() {
                     }
                     if (statusEl) {
                         if (successCount === totalFiles) {
-                            statusEl.textContent = `✓ All ${totalFiles} files downloaded successfully.`;
+                            statusEl.textContent = `✓ All ${totalFiles} files ${dirHandle ? 'streamed directly to disk' : 'downloaded'} successfully.`;
                         } else {
                             statusEl.textContent = `Downloaded ${successCount} of ${totalFiles} files.`;
                         }
@@ -916,6 +998,11 @@ async function receiveHostedDrop() {
                                 dlBtn.style.background = 'var(--accent-emerald)';
                                 if (typeof playProceduralSound === 'function') playProceduralSound('pop');
                             } catch (err) {
+                                if (err && err.name === 'AbortError') {
+                                    dlBtn.disabled = false;
+                                    dlBtn.innerHTML = '<i class="fa-solid fa-download"></i>';
+                                    return;
+                                }
                                 dlBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
                                 dlBtn.style.background = 'var(--accent-red, #ef4444)';
                                 dlBtn.disabled = false;
@@ -930,32 +1017,36 @@ async function receiveHostedDrop() {
         }
     }
 
-    const executeDownload = async (forceDirectDisk = false) => {
-        const directDiskBtn = document.getElementById('drop-direct-disk-btn');
+    const executeDownload = async () => {
         if (downloadBtn) downloadBtn.disabled = true;
-        if (directDiskBtn) directDiskBtn.disabled = true;
         downloadBtn.textContent = isChunked ? 'Preparing...' : 'Downloading...';
 
         const key = await importDropKey(keyB64);
         const canStreamToDisk = typeof window.showSaveFilePicker === 'function';
-        const isDirectDisk = canStreamToDisk && (forceDirectDisk || localStorage.getItem('emit-direct-disk') === 'true' || meta.size > MEMORY_SAFE_DOWNLOAD_MAX_BYTES);
+        const isDirectDisk = canStreamToDisk && (localStorage.getItem('emit-direct-disk') === 'true' || meta.size > MEMORY_SAFE_DOWNLOAD_MAX_BYTES);
 
-        if (!isChunked || !meta.chunkCount) {
-            let writable = null;
-            if (isDirectDisk) {
-                downloadBtn.textContent = 'High-Speed Stream Mode';
-                if (statusEl) statusEl.textContent = 'Select save location to stream directly to disk...';
-                try {
-                    const handle = await window.showSaveFilePicker({ suggestedName: meta.filename });
-                    writable = await handle.createWritable();
-                } catch (e) {
-                    if (downloadBtn) downloadBtn.disabled = false;
-                    if (directDiskBtn) directDiskBtn.disabled = false;
-                    downloadBtn.textContent = 'Download';
+        let writable = null;
+        if (isDirectDisk) {
+            downloadBtn.textContent = 'Streaming to Disk...';
+            if (statusEl) statusEl.textContent = 'Please choose where to save the file...';
+            try {
+                const handle = await window.showSaveFilePicker({ suggestedName: meta.filename });
+                writable = await handle.createWritable();
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    if (downloadBtn) {
+                        downloadBtn.disabled = false;
+                        downloadBtn.innerHTML = '<i class="fa-solid fa-arrow-down"></i> Download';
+                    }
+                    if (statusEl) statusEl.textContent = 'Decryption happens in your browser.';
                     return;
                 }
+                console.warn('File picker failed, falling back to memory download', e);
+                writable = null;
             }
+        }
 
+        if (!isChunked || !meta.chunkCount) {
             downloadBtn.textContent = 'Downloading...';
             const resp = await fetch(`/download/${token}`);
             const packedBuf = await resp.arrayBuffer();
@@ -970,7 +1061,6 @@ async function receiveHostedDrop() {
                 downloadBtn.textContent = 'Decryption failed';
                 if (writable) try { await writable.close(); } catch {}
                 if (downloadBtn) downloadBtn.disabled = false;
-                if (directDiskBtn) directDiskBtn.disabled = false;
                 return;
             }
 
@@ -984,8 +1074,9 @@ async function receiveHostedDrop() {
                 a.download = meta.filename;
                 a.click();
             }
-            downloadBtn.textContent = '✓ Downloaded';
+            downloadBtn.innerHTML = `<i class="fa-solid fa-check"></i> ${writable ? 'Saved to Disk' : 'Downloaded'}`;
             if (typeof playProceduralSound === 'function') playProceduralSound('pop');
+            if (statusEl) statusEl.textContent = `✓ ${writable ? 'Streamed directly to disk' : 'Download complete'}.`;
             if (meta.burnOnDownload) {
                 fetch('/drop-burn', { method: 'POST', body: new URLSearchParams({ token }) }).catch(() => {});
                 const card = document.querySelector('.drop-card') || document.querySelector('.sleek-card') || document.body;
@@ -994,7 +1085,6 @@ async function receiveHostedDrop() {
                 downloadBtn.disabled = true;
                 downloadBtn.textContent = '🔥 Burned';
                 downloadBtn.style.background = 'var(--accent-danger, #ef4444)';
-                if (directDiskBtn) directDiskBtn.style.display = 'none';
             }
             return;
         }
@@ -1004,36 +1094,15 @@ async function receiveHostedDrop() {
         const ivB64 = Array.isArray(fragPayload) ? fragPayload[2] : fragPayload.iv;
         const ivPrefix4 = b64ToUint8(ivB64);
 
-        const useBlob = !isDirectDisk;
-
-        if (!useBlob && !canStreamToDisk) {
-            downloadBtn.disabled = true;
-            if (statusEl) statusEl.textContent = 'File is too large to download without streaming support (File System Access API).';
-            return;
-        }
-
-        let writable = null;
-        let parts = null;
+        let parts = writable ? null : [];
         try {
-            if (!useBlob) {
-                downloadBtn.textContent = 'High-Speed Stream Mode';
-                if (statusEl) statusEl.textContent = 'Please select a save location to stream directly to disk...';
-                const handle = await window.showSaveFilePicker({ suggestedName: meta.filename });
-                writable = await handle.createWritable();
-            } else {
-                parts = [];
-            }
-
             for (let i = 0; i < chunkCount; i++) {
-                downloadBtn.textContent = `Downloading ${i + 1}/${chunkCount}...`;
+                downloadBtn.textContent = writable ? `Streaming ${i + 1}/${chunkCount}...` : `Downloading ${i + 1}/${chunkCount}...`;
                 if (statusEl) statusEl.textContent = `Decrypting ${i + 1}/${chunkCount}...`;
 
                 const resp = await fetch(`/download-chunk/${token}/${i}`);
                 if (!resp.ok) throw new Error('Failed to download chunk ' + i);
                 const cipherBuf = await resp.arrayBuffer();
-
-                downloadBtn.textContent = `Decrypting ${i + 1}/${chunkCount}...`;
-                if (statusEl) statusEl.textContent = `Decrypting ${i + 1}/${chunkCount}...`;
 
                 const iv = deriveChunkIv(ivPrefix4, i);
                 let plainBuf;
@@ -1051,9 +1120,9 @@ async function receiveHostedDrop() {
                 }
             }
 
-            if (writable) await writable.close();
-
-            if (!writable) {
+            if (writable) {
+                await writable.close();
+            } else {
                 const blob = new Blob(parts);
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
@@ -1061,9 +1130,9 @@ async function receiveHostedDrop() {
                 a.click();
             }
 
-            downloadBtn.textContent = '✓ Downloaded';
+            downloadBtn.innerHTML = `<i class="fa-solid fa-check"></i> ${writable ? 'Saved to Disk' : 'Downloaded'}`;
             if (typeof playProceduralSound === 'function') playProceduralSound('pop');
-            if (statusEl) statusEl.textContent = '✓ Download complete.';
+            if (statusEl) statusEl.textContent = `✓ ${writable ? 'Streamed directly to disk' : 'Download complete'}.`;
             if (meta.burnOnDownload) {
                 fetch('/drop-burn', { method: 'POST', body: new URLSearchParams({ token }) }).catch(() => {});
                 const card = document.querySelector('.drop-card') || document.querySelector('.sleek-card') || document.body;
@@ -1076,7 +1145,7 @@ async function receiveHostedDrop() {
         } catch (e) {
             if (e.name === 'AbortError') {
                 downloadBtn.disabled = false;
-                downloadBtn.textContent = 'Download (Interrupted)';
+                downloadBtn.innerHTML = '<i class="fa-solid fa-arrow-down"></i> Download';
                 if (statusEl) statusEl.textContent = 'Download cancelled by user.';
                 return;
             }
@@ -1084,8 +1153,6 @@ async function receiveHostedDrop() {
             downloadBtn.textContent = '❌ Download Failed';
             if (statusEl) statusEl.textContent = 'Error: ' + e.message;
             downloadBtn.disabled = false;
-            const directDiskBtn = document.getElementById('drop-direct-disk-btn');
-            if (directDiskBtn) directDiskBtn.disabled = false;
         } finally {
             try {
                 if (writable) await writable.close();
@@ -1094,9 +1161,7 @@ async function receiveHostedDrop() {
         }
     };
 
-    downloadBtn?.addEventListener('click', () => executeDownload(false));
-    const directDiskBtn = document.getElementById('drop-direct-disk-btn');
-    directDiskBtn?.addEventListener('click', () => executeDownload(true));
+    downloadBtn?.addEventListener('click', () => executeDownload());
 
     return true;
 }
