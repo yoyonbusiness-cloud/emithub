@@ -2274,13 +2274,23 @@ function updateTransferProgress(fileId, percent, statusText, speedStr, etaStr, c
     if (pct) pct.textContent = `${displayPct}%`;
     if (stat) {
         if (percent > 0 && percent < 100 && speedStr === '0 B/s') {
-            stat.textContent = `Resuming transfer... ${displayPct}%`;
+            stat.textContent = `Resuming... ${displayPct}%`;
             stat.style.color = 'var(--accent-warning)';
-        } else if (speedStr && etaStr) {
-            stat.textContent = `${statusText} • ${speedStr} • ETA ${etaStr}`;
+        } else if (speedStr) {
+            const cleanPeer = statusText ? statusText.replace(/^(Receiving from|Sending to|Resuming from|Starting send to|From|To)\s+/i, '').trim() : '';
+            const peerPart = cleanPeer && cleanPeer.toLowerCase() !== normalizedStatus ? cleanPeer : '';
+            const etaPart = etaStr && etaStr !== '--:--' ? `ETA ${etaStr}` : '';
+
+            const parts = [speedStr];
+            if (peerPart) parts.push(peerPart);
+            if (etaPart) parts.push(etaPart);
+
+            stat.textContent = parts.join(' • ');
+            stat.title = `${statusText || ''} • ${speedStr}${etaStr ? ` • ETA ${etaStr}` : ''}`.trim();
             stat.style.color = '';
         } else {
             stat.textContent = statusText;
+            stat.title = statusText || '';
             stat.style.color = '';
         }
     }

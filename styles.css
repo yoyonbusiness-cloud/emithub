@@ -1610,6 +1610,29 @@
         position: relative;
     }
 
+    .transfer-progress-container .transfer-info-text {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .transfer-progress-container .transfer-info-text span:first-child {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+    }
+
+    .transfer-progress-container .transfer-info-text span:last-child {
+        flex-shrink: 0;
+        font-weight: 700;
+        color: var(--text-pure);
+        font-size: 0.7rem;
+    }
+
     .transfer-graph-canvas {
         position: absolute;
         bottom: 24px;
@@ -5615,9 +5638,11 @@
         }
 
         #settings-theme-select {
-            max-width: 110px;
-            font-size: 0.78rem;
-            padding-left: 0.75rem;
+            max-width: 155px;
+            font-size: 0.8rem;
+            padding-left: 0.8rem;
+            padding-right: 1.85rem;
+            background-position: right 0.65rem center;
         }
     }
 
