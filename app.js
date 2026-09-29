@@ -2245,7 +2245,7 @@ function createTransferElement(fileId, name, size, isReceiving, dataBlob = null,
         </div>
         <div class="transfer-actions" style="display:flex; gap: 8px; align-items: center;">
             <button class="btn-download" id="resume-btn-${fileId}" style="display:none;"><i class="fa-solid fa-rotate-right"></i> Resume</button>
-            <a class="btn-download" id="download-btn-${fileId}" style="pointer-events: ${isReceiving ? 'none' : 'auto'}; opacity: ${isReceiving ? '0.4' : '1'};"><i class="fa-solid fa-download"></i> Save</a>
+            <a class="btn-download" id="download-btn-${fileId}" style="display:none;"><i class="fa-solid fa-download"></i> Save</a>
             <button class="action-icon" id="cancel-transfer-${fileId}" title="Cancel"><i class="fa-solid fa-xmark"></i></button>
         </div>
     `;

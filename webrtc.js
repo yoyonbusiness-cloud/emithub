@@ -722,8 +722,10 @@ async function restorePersistedP2PTransfers() {
                 '',
                 ''
             );
-            if (transfer.direction === 'upload') {
+            if (transfer.direction === 'upload' && transfer.paused) {
                 setResumeButtonState(fileId, true, null);
+            } else {
+                setResumeButtonState(fileId, false, null);
             }
             restoredAny = true;
         });
@@ -943,8 +945,13 @@ function forceTransferDirection(fileId, isReceiving, size = null) {
         info.innerHTML = `${sizeText} | <i class="fa-solid ${isReceiving ? 'fa-arrow-down' : 'fa-arrow-up'}"></i> ${isReceiving ? 'Receiving' : 'Sending'}`;
     }
     if (downloadBtn) {
-        downloadBtn.style.pointerEvents = isReceiving ? 'none' : 'auto';
-        downloadBtn.style.opacity = isReceiving ? '0.4' : '1';
+        if (!isReceiving || !downloadBtn.hasAttribute('href')) {
+            downloadBtn.style.display = 'none';
+        } else {
+            downloadBtn.style.display = 'inline-flex';
+            downloadBtn.style.pointerEvents = 'auto';
+            downloadBtn.style.opacity = '1';
+        }
     }
 }
 
