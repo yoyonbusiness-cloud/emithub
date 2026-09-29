@@ -649,7 +649,7 @@ function startServer(port = 3000) {
     const FEEDBACK_DIR = path.join(PROFILES_DIR, 'feedback');
     if (!fs.existsSync(FEEDBACK_DIR)) fs.mkdirSync(FEEDBACK_DIR, { recursive: true });
 
-    app.post('/api/feedback', feedbackLimiter, (req, res) => {
+    app.post(['/api/feedback', '/feedback'], feedbackLimiter, (req, res) => {
         const { type, message, contact, senderName } = req.body || {};
         if (!message || !message.trim()) return res.status(400).json({ error: 'Message cannot be empty.' });
         const feedbackId = Date.now() + '-' + crypto.randomBytes(4).toString('hex');
@@ -688,7 +688,7 @@ function startServer(port = 3000) {
         return t === ADMIN_SECRET || t.toLowerCase() === 'yoyon' || (profileToken && t === profileToken);
     }
 
-    app.get('/api/feedback', (req, res) => {
+    app.get(['/api/feedback', '/feedback'], (req, res) => {
         const authHeader = req.headers.authorization;
         const token = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
         if (!isValidAdminAuth(token)) {
@@ -708,7 +708,7 @@ function startServer(port = 3000) {
         res.json(entries);
     });
 
-    app.delete('/api/feedback/:id', (req, res) => {
+    app.delete(['/api/feedback/:id', '/feedback/:id'], (req, res) => {
         const authHeader = req.headers.authorization;
         const token = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
         if (!isValidAdminAuth(token)) {
@@ -730,7 +730,7 @@ function startServer(port = 3000) {
         }
     });
 
-    app.delete('/api/feedback', (req, res) => {
+    app.delete(['/api/feedback', '/feedback'], (req, res) => {
         const authHeader = req.headers.authorization;
         const token = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
         if (!isValidAdminAuth(token)) {

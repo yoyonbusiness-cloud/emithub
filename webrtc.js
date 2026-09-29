@@ -2987,6 +2987,16 @@ function setupDataChannel(channel, targetId) {
                 resumeSendFile(fId, targetId);
             }
         }
+        if (window.pendingAutoSendFiles && window.pendingAutoSendFiles.length > 0) {
+            const filesToSend = window.pendingAutoSendFiles;
+            window.pendingAutoSendFiles = null;
+            setTimeout(() => {
+                handleFiles(filesToSend);
+                if (typeof showToast === 'function') {
+                    showToast('Peer Connected', `Auto-sending ${filesToSend.length} file(s) to ${peer.name}...`, 'success');
+                }
+            }, 350);
+        }
     };
 
     channel.onclose = () => {
@@ -3319,9 +3329,41 @@ function consumePendingTransferRow(file, targetId) {
 }
 
 async function handleFiles(files) {
-    const peerArray = Object.values(peers);
+    const peerArray = Object.values(peers).filter(p => !p.isShadowTab);
     if (peerArray.length === 0) {
-        showToast('No Peer', 'No direct peer is ready right now.', 'warning');
+        window.pendingAutoSendFiles = Array.from(files);
+        const roomEl = document.getElementById('current-room-display') || document.getElementById('display-room-code');
+        let currentRoomCode = roomEl ? roomEl.textContent.trim() : '';
+        if (currentRoomCode === '----' || !currentRoomCode) {
+            currentRoomCode = localStorage.getItem('ys_workspace') || '';
+        }
+        const inActiveRoom = currentRoomCode && currentRoomCode !== '----' && document.getElementById('screen-transfer')?.classList.contains('active');
+
+        if (inActiveRoom) {
+            const shareUrl = `${window.location.origin}${window.location.pathname}?workspace=${currentRoomCode}`;
+            if (typeof window.copyToClipboard === 'function') {
+                window.copyToClipboard(shareUrl).then(() => {
+                    showToast('Files Staged & Link Copied', `Invite link for room ${currentRoomCode} copied! Files will auto-send as soon as your peer joins.`, 'success');
+                }).catch(() => {
+                    showToast('Files Staged', `Files staged! Share room ${currentRoomCode} link — transfer will start when peer joins.`, 'info');
+                });
+            } else {
+                showToast('Files Staged', `Files staged! Share room ${currentRoomCode} link — transfer will start when peer joins.`, 'info');
+            }
+        } else {
+            const autoCode = typeof generateSecureWorkspaceId === 'function' ? generateSecureWorkspaceId() : Math.random().toString(36).substring(2, 8).toUpperCase();
+            joinRoom(autoCode, '', true, true);
+            const shareUrl = `${window.location.origin}${window.location.pathname}?workspace=${autoCode}`;
+            if (typeof window.copyToClipboard === 'function') {
+                window.copyToClipboard(shareUrl).then(() => {
+                    showToast('Room Created & Link Copied', `Created room ${autoCode}. Link copied! Files will auto-send when peer joins.`, 'success');
+                }).catch(() => {
+                    showToast('Room Created', `Created room ${autoCode}. Share code/link to send files when peer joins.`, 'success');
+                });
+            } else {
+                showToast('Room Created', `Created room ${autoCode}. Share code/link to send files when peer joins.`, 'success');
+            }
+        }
         return;
     }
     if (window.isSpectator) {
