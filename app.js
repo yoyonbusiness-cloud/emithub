@@ -408,19 +408,6 @@ function initFeedbackModal() {
             }
         });
     }
-
-    window.openFeedbackModal = function(initialType, initialText) {
-        modal.style.display = 'flex';
-        if (typeSelect && initialType) typeSelect.value = initialType;
-        if (messageInput) {
-            if (typeof initialText === 'string') messageInput.value = initialText;
-            setTimeout(() => messageInput.focus(), 60);
-        }
-    };
-
-    if (window.location.hash === '#feedback' || new URLSearchParams(window.location.search).has('feedback')) {
-        setTimeout(() => window.openFeedbackModal(), 400);
-    }
 }
 
 
