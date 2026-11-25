@@ -1188,6 +1188,11 @@
     <script src="hosted-drop.js?v=3" defer></script>
     <script src="app.js?v=3" defer></script>
     <script src="webrtc.js?v=3" defer></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+        }
+    </script>
 
     <div id="destruction-request-modal" class="drop-modal-overlay" style="display:none; z-index: 10002;">
         <div class="drop-modal"

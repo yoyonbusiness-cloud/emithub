@@ -71,6 +71,20 @@ socket.on('live-stats-updated', (stats) => {
     if (linksEl) linksEl.textContent = stats.activeHostedLinks !== undefined ? stats.activeHostedLinks : '—';
 });
 
+function applyIceServerConfig(nextConfig) {
+    if (!nextConfig || !Array.isArray(nextConfig.iceServers) || nextConfig.iceServers.length === 0) return;
+    configuration = { iceServers: nextConfig.iceServers };
+    const transport = nextConfig.turnEnabled ? 'STUN + TURN fallback' : 'STUN only';
+    auditLog(`Connection transport configured: ${transport}`);
+}
+
+socket.on('ice-server-config', applyIceServerConfig);
+
+fetch('/api/ice-servers', { cache: 'no-store' })
+    .then((response) => response.ok ? response.json() : null)
+    .then(applyIceServerConfig)
+    .catch(() => {});
+
 socket.on('connect', () => {
     window.isShadowTab = false;
     window.primarySocketId = null;
@@ -326,7 +340,7 @@ async function loadKeyIntoWorker(aesKey) {
 initEncryptWorker();
 auditLog('emit initialised — all crypto runs client-side');
 
-const configuration = {
+let configuration = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' }
@@ -4772,7 +4786,7 @@ function initiateTabMeshOffer(tabId, targetId) {
 
 function setupTabPeerConnection(tabId, targetId) {
     const state = window.tabStates[tabId];
-    const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    const pc = new RTCPeerConnection(configuration);
     pc.onicecandidate = (e) => {
         if (e.candidate && state.socket) {
             state.socket.emit('ice-candidate', e.candidate, state.signalingId, targetId);

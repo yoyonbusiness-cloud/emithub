@@ -42,6 +42,7 @@ npm test        # check + smoke
 
 - Set `PORT` if needed (defaults to `3000`).
 - Set `EMIT_CORS_ORIGIN` to your public origin(s), comma-separated, before exposing publicly. It defaults to `*` for local/dev convenience.
+- Set `TURN_URLS`, `TURN_USERNAME`, and `TURN_CREDENTIAL` to enable TURN fallback for users behind restrictive NATs or firewalls. Keep these values in deployment secrets, never in browser code or Git.
 - Run behind HTTPS (tunnel or reverse proxy) for public use.
 - Hosted drops are stored on the server disk until expiry/download policy applies; use trusted environments and communicate this to users.
 - Review `POST /api/feedback` retention if you expose the app publicly; feedback includes submitter IP for abuse triage.

@@ -283,6 +283,17 @@ function startServer(port = 3000) {
     const chunkUploadLimiter = createRateLimiter(60 * 1000, 240);
 
     const app = express();
+    const turnUrls = (process.env.TURN_URLS || '').split(',').map(value => value.trim()).filter(Boolean);
+    const turnUsername = process.env.TURN_USERNAME || '';
+    const turnCredential = process.env.TURN_CREDENTIAL || '';
+    const turnEnabled = turnUrls.length > 0 && Boolean(turnUsername) && Boolean(turnCredential);
+    const iceServers = [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ];
+    if (turnEnabled) {
+        iceServers.push({ urls: turnUrls, username: turnUsername, credential: turnCredential });
+    }
     app.disable('x-powered-by');
     app.use((req, res, next) => {
         res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -293,6 +304,10 @@ function startServer(port = 3000) {
     });
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+    app.get('/api/ice-servers', (req, res) => {
+        res.setHeader('Cache-Control', 'no-store');
+        res.json({ iceServers, turnEnabled });
+    });
     const BLOCKED_STATIC_PATHS = new Set([
         '/server.js', '/package.json', '/package-lock.json', '/.gitignore', '/.env',
         '/server.pfx', '/server.pfx.backup', '/web.config'
@@ -714,6 +729,7 @@ function startServer(port = 3000) {
     }
 
     io.on('connection', (socket) => {
+        socket.emit('ice-server-config', { iceServers, turnEnabled });
         socket.on('join-drop-room', (token) => {
             socket.join(`drop:${token}`);
         });
