@@ -36,11 +36,11 @@
     }
 
     :root {
-        --bg-base: #030305;
-        --bg-grad-center: #100b1a;
+        --bg-base: #0B0D18;
+        --bg-grad-center: #151A2A;
 
-        --card-surface: #141416;
-        --card-elevated: #1e1e20;
+        --card-surface: #151827;
+        --card-elevated: #1D2133;
         --card-border: rgba(255, 255, 255, 0.05);
 
         --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
