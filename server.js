@@ -27,23 +27,7 @@ function startServer(port = 3000) {
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     });
 
-    const defaultAdminPath = path.join(PROFILES_JSON_DIR, 'yoyon.json');
-    if (!fs.existsSync(defaultAdminPath)) {
-        const adminToken = crypto.randomBytes(32).toString('hex');
-        const defaultAdminProfile = {
-            username: 'yoyon',
-            bio: 'Official Admin & Creator Profile for EmitHub.',
-            avatarUrl: '',
-            isAllowedForever: true,
-            token: adminToken,
-            uploads: [],
-            collections: [],
-            releases: []
-        };
-        try {
-            fs.writeFileSync(defaultAdminPath, JSON.stringify(defaultAdminProfile, null, 2));
-        } catch (e) { }
-    }
+    // Admin/backdoor profile creation removed.
     const DROP_TTL_MS = 60 * 60 * 1000;
     const dropMeta = new Map();
     const uploadSessions = new Map();
@@ -52,6 +36,10 @@ function startServer(port = 3000) {
 
     function generateDropToken() {
         return crypto.randomBytes(8).toString('base64url');
+    }
+
+    function isSafeToken(token) {
+        return typeof token === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(token);
     }
 
     const storage = multer.diskStorage({
@@ -231,8 +219,6 @@ function startServer(port = 3000) {
         };
     }
 
-    const ADMIN_SECRET = process.env.EMIT_ADMIN_SECRET || 'TkVI#Kef:=TXZ[sLoDnzoRI<cgxCYKcM8exe}#a??m1u=gn@<l@(!;LY#[8^>?rkn>2CfW=0tq2|c,f>Ot#|9PdiUrVE&XEjvg(O';
-
     function createRateLimiter(windowMs, maxRequests) {
         const hits = new Map();
         return (req, res, next) => {
@@ -259,12 +245,31 @@ function startServer(port = 3000) {
 
     const feedbackLimiter = createRateLimiter(60 * 1000, 5);
     const dropUploadLimiter = createRateLimiter(60 * 1000, 30);
-    const adminVerifyLimiter = createRateLimiter(5 * 60 * 1000, 5);
+    const chunkUploadLimiter = createRateLimiter(60 * 1000, 240);
 
     const app = express();
+    app.disable('x-powered-by');
+    app.use((req, res, next) => {
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+        res.setHeader('Permissions-Policy', 'camera=(), microphone=(self), geolocation=()');
+        next();
+    });
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-    app.use(express.static(__dirname));
+    const BLOCKED_STATIC_PATHS = new Set([
+        '/server.js', '/package.json', '/package-lock.json', '/.gitignore', '/.env',
+        '/server.pfx', '/server.pfx.backup', '/web.config'
+    ]);
+    app.use((req, res, next) => {
+        const p = req.path.toLowerCase();
+        if (BLOCKED_STATIC_PATHS.has(p) || p.startsWith('/.git') || p.startsWith('/profiles_data') || p.startsWith('/drops') || p.endsWith('.bat') || p.endsWith('.ps1')) {
+            return res.status(404).end();
+        }
+        next();
+    });
+    app.use(express.static(__dirname, { dotfiles: 'deny' }));
 
     let server;
     const isAzure = !!(process.env.WEBSITE_SITE_NAME || process.env.WEBSITE_INSTANCE_ID);
@@ -276,9 +281,10 @@ function startServer(port = 3000) {
     } else {
         server = http.createServer(app);
     }
+    const corsOrigin = process.env.EMIT_CORS_ORIGIN ? process.env.EMIT_CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean) : '*';
     const io = new Server(server, {
         cors: {
-            origin: "*",
+            origin: corsOrigin,
             methods: ["GET", "POST"]
         },
         transports: ['websocket', 'polling'],
@@ -356,15 +362,11 @@ function startServer(port = 3000) {
         filesTransferred: 0
     };
 
-    app.use(express.json({ limit: '10mb' }));
-    app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-    app.use(express.static(__dirname));
-
     app.get('/h/:token', (req, res) => {
         res.sendFile(path.join(__dirname, 'drop.html'));
     });
 
-    app.post('/upload', upload.single('file'), (req, res) => {
+    app.post('/upload', dropUploadLimiter, upload.single('file'), (req, res) => {
         if (!req.file || !req._dropToken) return res.status(400).json({ error: 'No file' });
         const token = req._dropToken;
         const originalName = req.body.name || 'file';
@@ -384,7 +386,7 @@ function startServer(port = 3000) {
         res.json({ token, expires, maxBytes: LEGACY_DROP_MAX_BYTES });
     });
 
-    app.post('/upload-session', multer().none(), (req, res) => {
+    app.post('/upload-session', dropUploadLimiter, multer().none(), (req, res) => {
         const originalName = req.body.name || 'file';
         const size = safeParseInt(req.body.size);
         const expiryMs = safeParseInt(req.body.expiry);
@@ -394,6 +396,7 @@ function startServer(port = 3000) {
         if (!expiryMs || expiryMs < 60000 || expiryMs > MAX_HOSTED_EXPIRY_MS) return res.status(400).json({ error: 'Invalid expiry' });
 
         let token = req.body.token;
+        if (token && !isSafeToken(token)) return res.status(400).json({ error: 'Invalid token' });
         if (!token) {
             token = generateDropToken();
             while (uploadSessions.has(token) || dropMeta.has(token)) {
@@ -443,6 +446,7 @@ function startServer(port = 3000) {
     const chunkStorage = multer.diskStorage({
         destination: (req, file, cb) => {
             const token = req.body.token;
+            if (!isSafeToken(token)) return cb(new Error('Invalid token'));
             const basePath = path.join(DROPS_DIR, token);
             const partsDir = path.join(basePath, 'parts');
             fs.mkdirSync(partsDir, { recursive: true });
@@ -456,11 +460,11 @@ function startServer(port = 3000) {
 
     const chunkUpload = multer({ storage: chunkStorage, limits: { fileSize: HOSTED_CHUNK_SIZE_BYTES + 1024 * 1024 } });
 
-    app.post('/upload-chunk', chunkUpload.single('chunk'), (req, res) => {
+    app.post('/upload-chunk', chunkUploadLimiter, chunkUpload.single('chunk'), (req, res) => {
         const token = req.body.token;
         const index = safeParseInt(req.body.index);
 
-        if (!token || index === null) return res.status(400).json({ error: 'Invalid token/index' });
+        if (!isSafeToken(token) || index === null) return res.status(400).json({ error: 'Invalid token/index' });
         const session = uploadSessions.get(token);
         if (!session) return res.status(404).json({ error: 'Upload session not found' });
         if (index < 0 || index >= session.chunkCount) return res.status(400).json({ error: 'Chunk index out of range' });
@@ -483,9 +487,9 @@ function startServer(port = 3000) {
         return !!session.expires && Date.now() > session.expires;
     }
 
-    app.post('/upload-finalize', multer().none(), (req, res) => {
+    app.post('/upload-finalize', dropUploadLimiter, multer().none(), (req, res) => {
         const token = req.body.token;
-        if (!token) return res.status(400).json({ error: 'Missing token' });
+        if (!isSafeToken(token)) return res.status(400).json({ error: 'Invalid token' });
 
         const session = uploadSessions.get(token);
         if (!session) return res.status(404).json({ error: 'Upload session not found' });
@@ -528,7 +532,7 @@ function startServer(port = 3000) {
 
     app.post('/drop-cancel', multer().none(), (req, res) => {
         const token = req.body.token;
-        if (!token) return res.status(400).json({ error: 'Missing token' });
+        if (!isSafeToken(token)) return res.status(400).json({ error: 'Invalid token' });
 
         if (dropMeta.has(token)) {
             dropMeta.delete(token);
@@ -546,7 +550,7 @@ function startServer(port = 3000) {
 
     app.post('/drop-burn', multer().none(), (req, res) => {
         const token = req.body.token;
-        if (!token) return res.status(400).json({ error: 'Missing token' });
+        if (!isSafeToken(token)) return res.status(400).json({ error: 'Invalid token' });
 
         if (dropMeta.has(token)) {
             dropMeta.delete(token);
@@ -558,6 +562,7 @@ function startServer(port = 3000) {
     });
 
     app.get('/drop-info/:token', (req, res) => {
+        if (!isSafeToken(req.params.token)) return res.status(400).json({ error: 'Invalid token' });
         let meta = dropMeta.get(req.params.token);
         if (!meta) {
             const session = uploadSessions.get(req.params.token);
@@ -595,6 +600,7 @@ function startServer(port = 3000) {
     });
 
     app.get('/download-chunk/:token/:index', (req, res) => {
+        if (!isSafeToken(req.params.token)) return res.status(400).send('Invalid token');
         const meta = dropMeta.get(req.params.token);
         if (!meta) return res.status(404).send(`Drop token not found: ${req.params.token}`);
         if (meta.expires && Date.now() > meta.expires) return res.status(410).send(`Drop expired: ${req.params.token}`);
@@ -616,6 +622,7 @@ function startServer(port = 3000) {
     });
 
     app.get('/download/:token', (req, res) => {
+        if (!isSafeToken(req.params.token)) return res.status(400).send('Invalid token');
         const meta = dropMeta.get(req.params.token);
         if (!meta || (meta.expires && Date.now() > meta.expires)) return res.status(404).send('Drop expired or not found');
         if (meta.mode === 'chunked') return res.status(400).send('Chunked drop: use /download-chunk');
@@ -628,22 +635,6 @@ function startServer(port = 3000) {
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(meta.filename)}.enc"`);
         res.setHeader('Content-Length', meta.size);
         fs.createReadStream(fpath).pipe(res);
-    });
-
-    app.post('/api/verify-admin', (req, res) => {
-        const { username, key } = req.body || {};
-        const u = String(username || '').trim().toLowerCase();
-        const k = String(key || '').trim();
-        let profileToken = '';
-        try {
-            const prof = readJsonFile(defaultAdminPath);
-            if (prof && prof.token) profileToken = prof.token;
-        } catch (e) { }
-
-        if (u === 'yoyon' && (k === ADMIN_SECRET || k.toLowerCase() === 'yoyon' || (profileToken && k === profileToken))) {
-            return res.json({ ok: true, token: ADMIN_SECRET });
-        }
-        return res.status(403).json({ error: 'Invalid admin credentials' });
     });
 
     const FEEDBACK_DIR = path.join(PROFILES_DIR, 'feedback');
@@ -664,93 +655,10 @@ function startServer(port = 3000) {
         };
         try {
             fs.writeFileSync(path.join(FEEDBACK_DIR, `${feedbackId}.json`), JSON.stringify(feedbackEntry, null, 2));
-            const adminChatFile = path.join(CHATS_DIR, 'yoyon_feedback.json');
-            let adminChatList = [];
-            if (fs.existsSync(adminChatFile)) {
-                try { adminChatList = JSON.parse(fs.readFileSync(adminChatFile, 'utf8')) || []; } catch (e) { }
-            }
-            adminChatList.push(feedbackEntry);
-            fs.writeFileSync(adminChatFile, JSON.stringify(adminChatList, null, 2));
         } catch (e) {
             console.error('Error saving feedback:', e);
         }
         res.json({ ok: true, id: feedbackId });
-    });
-
-    function isValidAdminAuth(token) {
-        if (!token) return false;
-        const t = String(token).trim();
-        let profileToken = '';
-        try {
-            const prof = readJsonFile(defaultAdminPath);
-            if (prof && prof.token) profileToken = prof.token;
-        } catch (e) { }
-        return t === ADMIN_SECRET || t.toLowerCase() === 'yoyon' || (profileToken && t === profileToken);
-    }
-
-    app.get('/api/feedback', (req, res) => {
-        const authHeader = req.headers.authorization;
-        const token = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
-        if (!isValidAdminAuth(token)) {
-            return res.status(403).json({ error: 'Unauthorized' });
-        }
-        const entries = [];
-        try {
-            const files = fs.readdirSync(FEEDBACK_DIR);
-            files.forEach(f => {
-                if (f.endsWith('.json')) {
-                    const item = readJsonFile(path.join(FEEDBACK_DIR, f));
-                    if (item) entries.push(item);
-                }
-            });
-            entries.sort((a, b) => b.createdAt - a.createdAt);
-        } catch (e) { }
-        res.json(entries);
-    });
-
-    app.delete('/api/feedback/:id', (req, res) => {
-        const authHeader = req.headers.authorization;
-        const token = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
-        if (!isValidAdminAuth(token)) {
-            return res.status(403).json({ error: 'Unauthorized' });
-        }
-        const id = req.params.id;
-        try {
-            const filePath = path.join(FEEDBACK_DIR, `${id}.json`);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-            const adminChatFile = path.join(CHATS_DIR, 'yoyon_feedback.json');
-            if (fs.existsSync(adminChatFile)) {
-                let list = JSON.parse(fs.readFileSync(adminChatFile, 'utf8')) || [];
-                list = list.filter(item => item.id !== id);
-                fs.writeFileSync(adminChatFile, JSON.stringify(list, null, 2));
-            }
-            res.json({ ok: true });
-        } catch (e) {
-            res.status(500).json({ error: 'Failed to delete feedback' });
-        }
-    });
-
-    app.delete('/api/feedback', (req, res) => {
-        const authHeader = req.headers.authorization;
-        const token = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
-        if (!isValidAdminAuth(token)) {
-            return res.status(403).json({ error: 'Unauthorized' });
-        }
-        try {
-            const files = fs.readdirSync(FEEDBACK_DIR);
-            files.forEach(f => {
-                if (f.endsWith('.json')) {
-                    fs.unlinkSync(path.join(FEEDBACK_DIR, f));
-                }
-            });
-            const adminChatFile = path.join(CHATS_DIR, 'yoyon_feedback.json');
-            if (fs.existsSync(adminChatFile)) {
-                fs.writeFileSync(adminChatFile, JSON.stringify([], null, 2));
-            }
-            res.json({ ok: true });
-        } catch (e) {
-            res.status(500).json({ error: 'Failed to clear feedback' });
-        }
     });
 
 
@@ -1642,7 +1550,7 @@ function startServer(port = 3000) {
 }
 
 if (require.main === module) {
-    startServer(process.env.PORT || 8080);
+    startServer(process.env.PORT || 3000);
 }
 
 module.exports = { startServer };

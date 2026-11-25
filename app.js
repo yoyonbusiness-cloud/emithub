@@ -76,104 +76,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ActivityTracker.init(ui.panels.actionSelection);
     }
 
-    const storedName = (localStorage.getItem('ys_persistent_name') || '').toLowerCase();
-    const isOwner = storedName === 'yoyon';
-    const statsPill = document.getElementById('live-stats-pill');
-    if (isOwner && statsPill) {
-        statsPill.style.display = 'flex';
-        statsPill.style.cursor = 'pointer';
-    }
-
-    if (statsPill) {
-        statsPill.addEventListener('click', async () => {
-            const currentName = (localStorage.getItem('ys_persistent_name') || '').toLowerCase();
-            if (currentName !== 'yoyon') return;
-            const token = localStorage.getItem('ys_admin_token') || '';
-            const modal = document.getElementById('admin-inbox-modal');
-            const listEl = document.getElementById('admin-inbox-list');
-            const closeBtn = document.getElementById('admin-inbox-close');
-            const clearAllBtn = document.getElementById('admin-inbox-clear-all');
-            if (!modal) return;
-            modal.style.display = 'flex';
-            if (closeBtn) closeBtn.onclick = () => { modal.style.display = 'none'; };
-            modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
-
-            if (clearAllBtn) {
-                clearAllBtn.onclick = async () => {
-                    if (!confirm('Delete all feedback submissions?')) return;
-                    try {
-                        const res = await fetch('/api/feedback', {
-                            method: 'DELETE',
-                            headers: { 'Authorization': 'Bearer ' + token }
-                        });
-                        if (res.ok && listEl) {
-                            listEl.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1.5rem 0;">No submissions yet.</p>';
-                        }
-                    } catch (e) { }
-                };
-            }
-
-            if (listEl) listEl.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1.5rem 0;">Loading submissions...</p>';
-            try {
-                const res = await fetch('/api/feedback', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-                if (res.ok) {
-                    const entries = await res.json();
-                    if (listEl) {
-                        if (!entries.length) {
-                            listEl.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1.5rem 0;">No submissions yet.</p>';
-                        } else {
-                            listEl.innerHTML = entries.map(e => {
-                                const date = new Date(e.createdAt).toLocaleString();
-                                return '<div id="feedback-card-' + e.id + '" style="background:var(--card-elevated); border:1px solid var(--card-border); border-radius:10px; padding:1rem; transition:opacity 0.25s ease, transform 0.25s ease;">' +
-                                    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">' +
-                                    '<div style="display:flex; align-items:center; gap:0.5rem;">' +
-                                    '<span style="font-weight:700; font-size:0.85rem; color:var(--text-pure);">' + (e.senderName || 'Anonymous') + '</span>' +
-                                    '<span style="font-size:0.7rem; padding:0.15rem 0.45rem; border-radius:6px; background:rgba(255,255,255,0.06); color:var(--text-muted); text-transform:uppercase;">' + (e.type || 'bug') + '</span>' +
-                                    '</div>' +
-                                    '<div style="display:flex; align-items:center; gap:0.6rem;">' +
-                                    '<span style="font-size:0.72rem; color:var(--text-muted);">' + date + '</span>' +
-                                    '<button class="btn-icon dismiss-feedback-btn" data-id="' + e.id + '" title="Dismiss report" style="color:var(--text-muted); width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; border:none; background:transparent;"><i class="fa-solid fa-trash-can" style="font-size:0.75rem;"></i></button>' +
-                                    '</div>' +
-                                    '</div>' +
-                                    '<p style="font-size:0.88rem; color:var(--text-secondary); margin:0 0 0.4rem; white-space:pre-wrap; word-break:break-word;">' + e.message + '</p>' +
-                                    (e.contact ? '<span style="font-size:0.75rem; color:var(--accent-emerald);">' + e.contact + '</span>' : '') +
-                                    '</div>';
-                            }).join('');
-
-                            listEl.querySelectorAll('.dismiss-feedback-btn').forEach(btn => {
-                                btn.addEventListener('click', async () => {
-                                    const fid = btn.dataset.id;
-                                    const card = document.getElementById('feedback-card-' + fid);
-                                    if (card) {
-                                        card.style.opacity = '0';
-                                        card.style.transform = 'scale(0.95)';
-                                        setTimeout(() => {
-                                            card.remove();
-                                            if (!listEl.children.length) {
-                                                listEl.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1.5rem 0;">No submissions yet.</p>';
-                                            }
-                                        }, 250);
-                                    }
-                                    try {
-                                        await fetch('/api/feedback/' + fid, {
-                                            method: 'DELETE',
-                                            headers: { 'Authorization': 'Bearer ' + token }
-                                        });
-                                    } catch (e) { }
-                                });
-                            });
-                        }
-                    }
-                } else {
-                    if (listEl) listEl.innerHTML = '<p style="color:var(--accent-danger); font-size:0.85rem; text-align:center; padding:1.5rem 0;">Access Denied.</p>';
-                }
-            } catch (err) {
-                if (listEl) listEl.innerHTML = '<p style="color:var(--accent-danger); font-size:0.85rem; text-align:center; padding:1.5rem 0;">Failed to load inbox.</p>';
-            }
-        });
-    }
+    // Admin inbox removed.
 });
 
 
@@ -395,7 +298,7 @@ function initFeedbackModal() {
                 const data = await res.json();
                 if (res.ok && data.ok) {
                     modal.style.display = 'none';
-                    showToast('Sent', 'Your report was sent to Yoyon.', 'success');
+                    showToast('Sent', 'Your feedback was submitted.', 'success');
                     if (messageInput) messageInput.value = '';
                 } else {
                     showToast('Error', data.error || 'Failed to submit report.', 'error');
@@ -404,7 +307,7 @@ function initFeedbackModal() {
                 showToast('Network Error', 'Could not send report to server.', 'error');
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Send to Admin';
+                submitBtn.textContent = 'Send Feedback';
             }
         });
     }
@@ -694,10 +597,10 @@ function initNearbyDiscoveryClient() {
                         _nearbyProgressOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:1.25rem;';
                         _nearbyProgressOverlay.innerHTML = `
                             <div style="background:var(--card-surface,#1a1a1a);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:2rem 2.5rem;min-width:300px;max-width:90vw;text-align:center;">
-                                <div style="font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-emerald,#10b981);margin-bottom:0.5rem;">Sending to Nearby Device</div>
+                                <div style="font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-emerald,#6366f1);margin-bottom:0.5rem;">Sending to Nearby Device</div>
                                 <div id="nearby-upload-filename" style="font-weight:700;font-size:1rem;color:var(--text-pure,#fff);margin-bottom:1.25rem;word-break:break-all;"></div>
                                 <div style="background:rgba(255,255,255,0.06);border-radius:999px;height:8px;overflow:hidden;margin-bottom:0.75rem;">
-                                    <div id="nearby-upload-bar" style="height:100%;border-radius:999px;background:var(--accent-emerald,#10b981);width:0%;transition:width 0.3s ease;"></div>
+                                    <div id="nearby-upload-bar" style="height:100%;border-radius:999px;background:var(--accent-emerald,#6366f1);width:0%;transition:width 0.3s ease;"></div>
                                 </div>
                                 <div id="nearby-upload-pct" style="font-size:0.85rem;color:var(--text-secondary,#aaa);"></div>
                                 <div id="nearby-upload-step" style="font-size:0.75rem;color:var(--text-muted,#666);margin-top:0.35rem;"></div>
@@ -1020,15 +923,10 @@ function getHostedModalElements() {
 }
 
 function updateAdminAccessControlsVisibility() {
-    const savedUser = (localStorage.getItem('ys_persistent_name') || sessionStorage.getItem('ys_user_name') || '').toLowerCase().trim();
-    const isAdmin = savedUser === 'yoyon' && localStorage.getItem('emit-admin-mode') !== 'false';
     const adminControls = document.getElementById('admin-access-controls');
     const adminBadge = document.getElementById('access-admin-badge');
-    if (adminControls) adminControls.style.display = isAdmin ? 'flex' : 'none';
-    if (adminBadge) {
-        adminBadge.style.display = isAdmin ? 'inline-block' : 'none';
-        adminBadge.textContent = 'Admin: yoyon';
-    }
+    if (adminControls) adminControls.style.display = 'none';
+    if (adminBadge) adminBadge.style.display = 'none';
 }
 
 function initCustomTimePickers() {
@@ -1456,11 +1354,10 @@ async function startHostedUpload(files) {
         return;
     }
 
-    const isYoyon = ((localStorage.getItem('ys_persistent_name') || sessionStorage.getItem('ys_user_name') || '').toLowerCase().trim()) === 'yoyon';
     const nickname = (nicknameInput?.value || '').trim();
     const burnOnDownload = !!burnCheckbox?.checked;
-    const canaryPing = isYoyon && !!canaryCheckbox?.checked;
-    const decoyTrap = isYoyon && !!decoyCheckbox?.checked;
+    const canaryPing = false;
+    const decoyTrap = false;
     const timedWindowEnabled = !!timedWindowCheckbox?.checked;
     let accessWindowStart = timedWindowEnabled ? (timedWindowStart?.value || '') : '';
     let accessWindowEnd = timedWindowEnabled ? (timedWindowEnd?.value || '') : '';
@@ -2324,7 +2221,8 @@ function updateTransferProgress(fileId, percent, statusText, speedStr, etaStr, c
 
         const statsArea = document.getElementById(`stats-${fileId}`);
         if (statsArea) {
-            statsArea.innerHTML = `<span class="status-label ${statusText.toLowerCase().includes('complete') ? 'received' : 'sent'}">${statusText}</span>`;
+            const doneLabel = normalizedStatus.includes('received') || normalizedStatus.includes('ready to save') ? 'Completed • Received' : (normalizedStatus.includes('sent') ? 'Completed • Sent' : (statusText || 'Completed'));
+            statsArea.innerHTML = `<span class="status-label ${doneLabel.toLowerCase().includes('received') ? 'received' : 'sent'}">${doneLabel}</span>`;
         }
     }
 }
@@ -2500,56 +2398,6 @@ window.addEventListener('paste', async (e) => {
     }
 });
 
-async function stripMetadata(file) {
-    const buffer = await file.arrayBuffer();
-    const arr = new Uint8Array(buffer);
-
-    if (file.type === 'image/jpeg' || file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg')) {
-
-        let newArr = [];
-        let i = 0;
-        if (arr[0] === 0xFF && arr[1] === 0xD8) {
-            newArr.push(0xFF, 0xD8);
-            i = 2;
-            while (i < arr.length - 1) {
-                if (arr[i] === 0xFF) {
-                    const marker = arr[i + 1];
-                    if (marker === 0xE1) {
-                        const length = (arr[i + 2] << 8) | arr[i + 3];
-                        i += length + 2;
-                        continue;
-                    }
-                    if (marker === 0xD9) break;
-                }
-                newArr.push(arr[i]);
-                i++;
-            }
-            newArr.push(0xFF, 0xD9);
-            return new File([new Uint8Array(newArr)], file.name, { type: file.type });
-        }
-    } else if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
-
-
-        let newArr = [];
-        const sig = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-        newArr.push(...sig);
-        let i = 8;
-        while (i < arr.length - 8) {
-            const length = (arr[i] << 24) | (arr[i + 1] << 16) | (arr[i + 2] << 8) | arr[i + 3];
-            const type = String.fromCharCode(arr[i + 4], arr[i + 5], arr[i + 6], arr[i + 7]);
-            const isCritical = (arr[i + 4] & 0x20) === 0;
-
-            if (isCritical || type === 'IHDR' || type === 'IDAT' || type === 'IEND' || type === 'PLTE') {
-                for (let j = 0; j < length + 12; j++) {
-                    newArr.push(arr[i + j]);
-                }
-            }
-            i += length + 12;
-        }
-        return new File([new Uint8Array(newArr)], file.name, { type: file.type });
-    }
-    return file;
-}
 
 if (ui.buttons.promptSecretCancel) {
     ui.buttons.promptSecretCancel.addEventListener('click', () => {
@@ -2591,7 +2439,7 @@ if (themeSelect) {
 
     if (savedTheme === 'custom') {
         customThemeControls.style.display = 'flex';
-        const savedCustom = JSON.parse(localStorage.getItem('emit-custom-theme') || '{"bg":"#121212","primary":"#10b981","text":"#ffffff"}');
+        const savedCustom = JSON.parse(localStorage.getItem('emit-custom-theme') || '{"bg":"#121212","primary":"#6366f1","text":"#ffffff"}');
         customBgColor.value = savedCustom.bg;
         customPrimaryColor.value = savedCustom.primary;
         customTextColor.value = savedCustom.text;
@@ -3027,32 +2875,7 @@ if (settingsConfirmNameBtn) {
         const newName = nameInput.value.trim();
         if (!newName) return;
 
-        const PRIVILEGED_PATTERNS = [/^yoyon$/i];
-        const isPrivileged = PRIVILEGED_PATTERNS.some(pattern => pattern.test(newName));
-
-        if (isPrivileged) {
-            const pass = await window.uiShared.CustomDialog.prompt('Identity Verification', `The name "${newName}" is restricted. Enter private key to claim:`);
-            if (!pass) {
-                showToast('Access Denied', 'Private key is required for restricted identity.', 'error');
-                return;
-            }
-            try {
-                const res = await fetch('/api/verify-admin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: newName, key: pass })
-                });
-                const data = await res.json();
-                if (!res.ok || !data.ok) {
-                    showToast('Access Denied', 'Invalid key for this identity.', 'error');
-                    return;
-                }
-                localStorage.setItem('ys_admin_token', data.token);
-            } catch (e) {
-                showToast('Access Denied', 'Verification failed.', 'error');
-                return;
-            }
-        }
+        // Admin/privileged identity verification removed.
 
         const BANNED_PATTERNS = [/admin/i, /system/i, /moderator/i];
         if (BANNED_PATTERNS.some(pattern => pattern.test(newName))) {
@@ -3303,7 +3126,7 @@ function renderStreak() {
             border = '1px solid rgba(255,255,255,0.1)';
             pawFill = '#6b7280';
         } else if (streak <= 10) {
-            bg = 'linear-gradient(135deg, #059669 0%, #10b981 100%)';
+            bg = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
         } else if (streak <= 30) {
             bg = 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)';
         } else if (streak <= 99) {
@@ -3765,7 +3588,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (streak >= 1) { tier = 1; tierName = 'Echo Node'; }
 
         const allColors = [
-            { id: 'emerald', name: 'Emerald', hex: '#10b981', minTier: 0 },
+            { id: 'emerald', name: 'Emerald', hex: '#6366f1', minTier: 0 },
             { id: 'pulse', name: 'Pulse Blue', hex: '#3b82f6', minTier: 2 },
             { id: 'quantum', name: 'Quantum Violet', hex: '#a855f7', minTier: 3 },
             { id: 'plasma', name: 'Plasma Red', hex: '#ef4444', minTier: 4 },
@@ -3981,6 +3804,7 @@ document.addEventListener('DOMContentLoaded', () => {
             title: 'Send via P2P (Direct Encrypted)',
             desc: 'Stream files peer-to-peer with zero server storage',
             icon: 'fa-paper-plane',
+            svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9Z"/></svg>',
             shortcut: 'Send',
             action: () => {
                 window.closeCommandPalette();
@@ -3990,9 +3814,9 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             id: 'create-vault',
             title: 'Create Vault',
-
             desc: 'Generate secure workspace keys and spin up a P2P vault',
-            icon: 'fa-server',
+            icon: 'fa-lock',
+            svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 1 1 8 0v3"/><circle cx="12" cy="16" r="1.5"/></svg>',
             shortcut: 'Vault',
             action: () => {
                 const btn = document.getElementById('show-generate-btn');
@@ -4005,6 +3829,7 @@ document.addEventListener('DOMContentLoaded', () => {
             title: 'Create Hosted Link',
             desc: 'Upload files temporarily to a secure hosted drop link',
             icon: 'fa-cloud-arrow-up',
+            svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10a4 4 0 0 0-7.9-1A5 5 0 0 0 6 14a4 4 0 0 0 0 8h12a3.5 3.5 0 0 0 0-7h-1"/><path d="M12 13v8"/><path d="m9 16 3-3 3 3"/></svg>',
             shortcut: 'Host',
             action: () => {
                 if (typeof openHostedModal === 'function') openHostedModal();
@@ -4015,7 +3840,8 @@ document.addEventListener('DOMContentLoaded', () => {
             id: 'join-p2p',
             title: 'Join P2P Workspace',
             desc: 'Connect to an active secure session using a passcode',
-            icon: 'fa-network-wired',
+            icon: 'fa-right-to-bracket',
+            svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>',
             shortcut: 'Join',
             action: () => {
                 showSubForm('Enter P2P Workspace Code', 'e.g. ALPHA-BETA', (val) => {
@@ -4031,7 +3857,8 @@ document.addEventListener('DOMContentLoaded', () => {
             id: 'open-hosted-url',
             title: 'Open Hosted Link URL',
             desc: 'Open or download files directly from a hosted drop link',
-            icon: 'fa-link',
+            icon: 'fa-arrow-up-right-from-square',
+            svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>',
             shortcut: 'URL',
             action: () => {
                 showSubForm('Enter Hosted Link URL or ID', 'e.g. https://emithub.com/h/...', (val) => {
@@ -4048,6 +3875,7 @@ document.addEventListener('DOMContentLoaded', () => {
             title: 'Lo-Fi Radio Player',
             desc: 'Toggle the floating procedural vinyl Lo-Fi player',
             icon: 'fa-compact-disc',
+            svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
             shortcut: 'Lofi',
             action: () => {
                 window.closeCommandPalette();
@@ -4064,30 +3892,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         {
-            id: 'toggle-admin-controls',
-            title: 'Toggle Admin Access Controls',
-            desc: 'Enable or disable admin-only Canary Ping and Decoy Trap controls',
-            icon: 'fa-shield-halved',
-            shortcut: 'Admin',
-            action: () => {
-                window.closeCommandPalette();
-                const savedUser = (localStorage.getItem('ys_persistent_name') || sessionStorage.getItem('ys_user_name') || '').toLowerCase().trim();
-                if (savedUser !== 'yoyon') {
-                    showToast('Access Denied', 'Admin controls are restricted to Yoyon.', 'error');
-                    return;
-                }
-                const current = localStorage.getItem('emit-admin-mode') !== 'false';
-                const next = !current;
-                localStorage.setItem('emit-admin-mode', next ? 'true' : 'false');
-                updateAdminAccessControlsVisibility();
-                showToast(next ? 'Admin Mode Enabled' : 'Admin Mode Disabled', next ? 'Canary Ping & Decoy Trap access unlocked.' : 'Admin controls hidden from transfer views.', next ? 'success' : 'info');
-            }
-        },
-        {
             id: 'keyboard-shortcuts',
             title: 'Keyboard Shortcuts',
             desc: 'View application hotkeys and navigation controls',
             icon: 'fa-keyboard',
+            svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M8 17h8"/></svg>',
             shortcut: 'Keys',
             action: () => {
                 const btn = document.getElementById('shortcuts-toggle-btn');
@@ -4100,6 +3909,7 @@ document.addEventListener('DOMContentLoaded', () => {
             title: 'Open Settings',
             desc: 'Adjust theme, custom accents, and client configs',
             icon: 'fa-gear',
+            svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.1a1 1 0 0 0-.7-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.1a1 1 0 0 0 .9-.7 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2h.1a1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.1a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1v.1a1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.1a1 1 0 0 0-.9.6Z"/></svg>',
             shortcut: 'Settings',
             action: () => {
                 const btn = document.getElementById('settings-toggle-btn');
@@ -4107,65 +3917,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.closeCommandPalette();
             }
         },
-        {
-            id: 'patch-notes',
-            title: 'View Patch Notes',
-            desc: 'Read the latest changes and release updates',
-            icon: 'fa-file-lines',
-            shortcut: 'Notes',
-            action: () => {
-                const btn = document.getElementById('patch-notes-toggle-btn');
-                if (btn) btn.click();
-                window.closeCommandPalette();
-            }
-        },
-        {
-            id: 'morse-code-translator',
-            title: 'Morse Code Translator',
-            desc: 'Translate English text to Morse code or vice-versa',
-            icon: 'fa-signal',
-            shortcut: 'Morse',
-            action: () => {
-                showSubForm('Morse Code Translator', 'Type Morse code or English text', (val) => {
-                    const morseMap = {
-                        '.-': 'A', '-...': 'B', '-.-.': 'C', '-..': 'D', '.': 'E', '..-.': 'F',
-                        '--.': 'G', '....': 'H', '..': 'I', '.---': 'J', '-.-': 'K', '.-..': 'L',
-                        '--': 'M', '-.': 'N', '---': 'O', '.--.': 'P', '--.-': 'Q', '.-.': 'R',
-                        '...': 'S', '-': 'T', '..-': 'U', '...-': 'V', '.--': 'W', '-..-': 'X',
-                        '-.--': 'Y', '--..': 'Z',
-                        '-----': '0', '.----': '1', '..---': '2', '...--': '3', '....-': '4',
-                        '.....': '5', '-....': '6', '--...': '7', '---..': '8', '----.': '9'
-                    };
-                    const textMap = {};
-                    for (const key in morseMap) {
-                        textMap[morseMap[key]] = key;
-                    }
-                    const isMorse = /^[.\-\s\/]*[.\-][.\-\s\/]*$/.test(val);
-                    let result = '';
-                    if (isMorse) {
-                        result = val.split('/').map(w => {
-                            return w.trim().split(/\s+/).map(c => morseMap[c] || '').join('');
-                        }).join(' ');
-                    } else {
-                        result = val.toUpperCase().split('').map(c => {
-                            if (c === ' ') return '/';
-                            return textMap[c] || '';
-                        }).filter(Boolean).join(' ');
-                    }
-                    if (typeof showToast === 'function') {
-                        showToast('Translation', result, 'success');
-                    }
-                });
-            }
-        },
-        {
-            id: 'morse-part-391',
-            title: 'Refer to Part 391',
-            desc: 'Translate the hidden Morse code message',
-            icon: 'fa-signal',
-            shortcut: 'Morse',
-            action: () => { }
-        }
     ];
 
     window.openCommandPalette = function () {
@@ -4217,31 +3968,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const query = cpInput.value.trim();
         const lowerQuery = query.toLowerCase();
 
-        const morseMap = {
-            '.-': 'A', '-...': 'B', '-.-.': 'C', '-..': 'D', '.': 'E', '..-.': 'F',
-            '--.': 'G', '....': 'H', '..': 'I', '.---': 'J', '-.-': 'K', '.-..': 'L',
-            '--': 'M', '-.': 'N', '---': 'O', '.--.': 'P', '--.-': 'Q', '.-.': 'R',
-            '...': 'S', '-': 'T', '..-': 'U', '...-': 'V', '.--': 'W', '-..-': 'X',
-            '-.--': 'Y', '--..': 'Z',
-            '-----': '0', '.----': '1', '..---': '2', '...--': '3', '....-': '4',
-            '.....': '5', '-....': '6', '--...': '7', '---..': '8', '----.': '9'
-        };
-        if (/^[.\-\s\/]*[.\-][.\-\s\/]*$/.test(query)) {
-            const decoded = query.split('/').map(w => {
-                return w.trim().split(/\s+/).map(c => morseMap[c] || '').join('');
-            }).join(' ');
-            cpFilteredCommands = [{
-                id: 'easter-egg-morse',
-                title: 'Refer to Part 391',
-                desc: 'Translation: ' + decoded,
-                icon: 'fa-signal',
-                shortcut: 'Morse',
-                action: () => { }
-            }];
-            cpActiveIndex = 0;
-            renderCPResults();
-            return;
-        }
         const normQuery = lowerQuery.replace(/\?$/, '').trim();
         const isSunSet = normQuery === 'why did the sun set';
         const isStick = normQuery === 'what do u call a bad looking stick' ||
@@ -4386,13 +4112,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             const currentSavedUser = (localStorage.getItem('ys_persistent_name') || sessionStorage.getItem('ys_user_name') || '').toLowerCase().trim();
             cpFilteredCommands = cpCommands.filter(c => {
-                if (c.id === 'toggle-admin-controls' && currentSavedUser !== 'yoyon') {
-                    return false;
-                }
-                if (c.id === 'morse-part-391') {
-                    const cleanQ = lowerQuery.trim();
-                    return cleanQ === 'morse' || cleanQ === 'morse code';
-                }
                 return c.title.toLowerCase().includes(lowerQuery) ||
                     c.desc.toLowerCase().includes(lowerQuery);
             });
@@ -4412,7 +4131,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="command-palette-item ${idx === cpActiveIndex ? 'active' : ''}" data-cmd-id="${c.id}" data-idx="${idx}">
                 <div class="command-palette-item-left">
                     <div class="command-palette-item-icon">
-                        <i class="fa-solid ${c.icon}"></i>
+                        ${c.svg || `<i class="fa-solid ${c.icon}"></i>`}
                     </div>
                     <div class="command-palette-item-text-wrapper">
                         <div class="command-palette-item-title">${c.title}</div>

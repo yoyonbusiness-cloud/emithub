@@ -39,3 +39,6 @@ New folder*/
 *.ogg
 *.jpg
 *.jpeg
+analytics.json
+test_hosted.txt
+test_p2p.txt

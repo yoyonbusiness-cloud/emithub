@@ -482,7 +482,7 @@
             var glow = isPink ? 'rgba(251, 191, 36, ' : (isRoom ? 'rgba(245, 158, 11, ' : 'rgba(224, 231, 255, ');
             rainCtx.fillStyle = glow + Math.max(0.1, Math.min(0.7, ff.alpha)) + ')';
             rainCtx.shadowBlur = 6;
-            rainCtx.shadowColor = isPink ? '#f59e0b' : (isRoom ? '#10b981' : '#818cf8');
+            rainCtx.shadowColor = isPink ? '#f59e0b' : (isRoom ? '#6366f1' : '#818cf8');
             rainCtx.fill();
             rainCtx.shadowBlur = 0;
         }

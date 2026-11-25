@@ -7,10 +7,13 @@
   "scripts": {
     "start": "node server.js",
     "build": "echo 'No build step'",
-    "test": "echo \"No tests defined\" && exit 0"
+    "check": "node --check server.js && node --check app.js && node --check shared.js && node --check webrtc.js && node --check hosted-drop.js && node --check encrypt-worker.js && node --check activity-tracker.js && node --check lofi-radio.js",
+    "smoke": "node tests/smoke.js",
+    "smoke:browser": "node tests/browser-smoke.js",
+    "test": "npm run check && npm run smoke"
   },
   "keywords": [],
-  "license": "ISC",
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "express": "^5.2.1",
     "multer": "^2.1.1",
@@ -21,6 +24,6 @@
     "puppeteer": "^24.39.0"
   },
   "engines": {
-    "node": "20.x"
+    "node": ">=20"
   }
 }

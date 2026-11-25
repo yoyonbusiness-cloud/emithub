@@ -191,7 +191,7 @@ function hasUsablePeerConnection(peer) {
 }
 
 syncDebugState();
-let audioContextEnabled = false;
+let audioContextEnabled = true;
 let pendingCandidates = {};
 
 let pendingOffers = {};
@@ -259,7 +259,7 @@ function auditLog(message) {
         panel.appendChild(line);
         panel.scrollTop = panel.scrollHeight;
     }
-    console.log('%cAUDIT', 'color:#10b981;font-weight:bold', entry);
+    console.log('%cAUDIT', 'color:#6366f1;font-weight:bold', entry);
 }
 window.auditLog = auditLog;
 
@@ -2543,7 +2543,7 @@ async function updatePeerListUI() {
             <div class="peer-info">
                 <div class="peer-name">
                     ${myName} (You)
-                    ${isGeneric ? `<button class="btn-pill btn-ghost btn-xs claim-badge" style="margin-left:8px; font-size:0.65rem; padding: 2px 6px; color:var(--accent-emerald); border: 1px solid rgba(16,185,129,0.3); background:rgba(16,185,129,0.1);" onclick="if(ui.buttons.settingsBtn)ui.buttons.settingsBtn.click()">Claim Name</button>` : ''}
+                    ${isGeneric ? `<button class="btn-pill btn-ghost btn-xs claim-badge" style="margin-left:8px; font-size:0.65rem; padding: 2px 6px; color:var(--accent-emerald); border: 1px solid rgba(99,102,241,0.3); background:rgba(99,102,241,0.1);" onclick="if(ui.buttons.settingsBtn)ui.buttons.settingsBtn.click()">Claim Name</button>` : ''}
                 </div>
                 <div class="peer-status active-text">Connected</div>
             </div>
@@ -4302,11 +4302,6 @@ window.reportUserActivity = reportUserActivity;
 ['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(type => {
     window.addEventListener(type, () => {
         reportUserActivity();
-        if (!audioContextEnabled) {
-            audioContextEnabled = true;
-            const nudge = document.getElementById('sound-nudge');
-            if (nudge) nudge.style.display = 'none';
-        }
     }, { passive: true });
 });
 
@@ -4332,19 +4327,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    setTimeout(() => {
-        if (!audioContextEnabled) {
-            const nudge = document.getElementById('sound-nudge');
-            if (nudge) {
-                nudge.style.display = 'flex';
-                nudge.onclick = () => {
-                    audioContextEnabled = true;
-                    nudge.style.display = 'none';
-                    if (typeof playProceduralSound === 'function') playProceduralSound('chime');
-                };
-            }
-        }
-    }, 2000);
 });
 
 window.restoreHostedTransferUI = async function (token, state) {

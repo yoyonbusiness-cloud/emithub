@@ -19,7 +19,7 @@ Emit
 
 ## Quick Start
 
-**Requirements:** Node.js 18+
+**Requirements:** Node.js 20+
 
 ```bash
 git clone https://github.com/yoyonbusiness-cloud/emithub.git
@@ -29,6 +29,22 @@ npm start
 ```
 
 Then open `http://localhost:3000` in your browser. Open it on two devices on the same Wi-Fi network, or expose via a tunnel (e.g. Cloudflare Tunnel, ngrok) for cross-network peer-to-peer transfers.
+
+### Checks
+
+```bash
+npm run check   # syntax checks
+npm run smoke   # HTTP/API smoke tests
+npm test        # check + smoke
+```
+
+### Public/Event Deployment Notes
+
+- Set `PORT` if needed (defaults to `3000`).
+- Set `EMIT_CORS_ORIGIN` to your public origin(s), comma-separated, before exposing publicly. It defaults to `*` for local/dev convenience.
+- Run behind HTTPS (tunnel or reverse proxy) for public use.
+- Hosted drops are stored on the server disk until expiry/download policy applies; use trusted environments and communicate this to users.
+- Review `POST /api/feedback` retention if you expose the app publicly; feedback includes submitter IP for abuse triage.
 
 ---
 
@@ -58,4 +74,4 @@ Workspaces are completely ephemeral. When participants disconnect or the room is
 
 ## License
 
-MIT © 2026 Yoyon
+AGPL-3.0 © 2026 Yoyon
