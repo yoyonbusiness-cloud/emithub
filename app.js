@@ -713,9 +713,11 @@ if (auditCloseBtn) {
     });
 }
 
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioCtx = null;
 function playProceduralSound(type) {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (localStorage.getItem('ys_audio') !== 'true') return;
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     osc.connect(gainNode);
@@ -1366,10 +1368,10 @@ async function startHostedUpload(files) {
         const [eh, em] = accessWindowEnd.split(':').map(Number);
         if (!isNaN(sh) && !isNaN(sm) && !isNaN(eh) && !isNaN(em)) {
             const startMins = sh * 60 + sm;
-            let endMins = eh * 60 + em;
-            if (endMins < startMins) endMins += 24 * 60;
-            if (endMins - startMins > 240) {
-                showToast('Window Too Long', 'Timed window cannot exceed 4 hours.', 'warning');
+            const endMins = eh * 60 + em;
+            const windowMinutes = (endMins - startMins + (24 * 60)) % (24 * 60);
+            if (windowMinutes === 0 || windowMinutes > 240) {
+                showToast('Invalid Timed Window', 'Choose a window between 1 minute and 4 hours.', 'warning');
                 return;
             }
         }
@@ -1770,7 +1772,7 @@ if (settingsSave) {
         const inactivityEl = document.getElementById('settings-inactivity-time');
 
         const stealth = stealthEl ? stealthEl.checked : (localStorage.getItem('ys_stealth') === 'true');
-        const audio = audioEl ? audioEl.checked : (localStorage.getItem('ys_audio') !== 'false');
+        const audio = audioEl ? audioEl.checked : (localStorage.getItem('ys_audio') === 'true');
         const detailed = detailedEl ? detailedEl.checked : (localStorage.getItem('ys_detailed_timer') === 'true');
         const inactivityMins = inactivityEl ? inactivityEl.value : (localStorage.getItem('ys_inactivity_mins') || '0');
 
@@ -1796,7 +1798,7 @@ if (settingsSave) {
 
 document.addEventListener('DOMContentLoaded', () => {
     const stealth = localStorage.getItem('ys_stealth') === 'true';
-    const audio = localStorage.getItem('ys_audio') !== 'false';
+    const audio = localStorage.getItem('ys_audio') === 'true';
     const storedDetailed = localStorage.getItem('ys_detailed_timer');
     const legacyDetailed = localStorage.getItem('emit-detailed-timer');
     const detailed = storedDetailed === 'true' || (storedDetailed === null && legacyDetailed === 'true');

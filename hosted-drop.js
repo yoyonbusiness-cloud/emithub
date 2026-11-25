@@ -98,12 +98,14 @@ function deriveChunkIv(ivPrefix4, chunkIndex) {
     return iv;
 }
 
-async function createHostedUploadSession(file, durationMs, requestedToken = null) {
+async function createHostedUploadSession(file, durationMs, requestedToken = null, options = {}) {
     const fd = new FormData();
     fd.append('name', file.name);
     fd.append('size', file.size.toString());
     fd.append('expiry', durationMs.toString());
     if (requestedToken) fd.append('token', requestedToken);
+    if (options.accessWindowStart) fd.append('accessWindowStart', options.accessWindowStart);
+    if (options.accessWindowEnd) fd.append('accessWindowEnd', options.accessWindowEnd);
 
     const res = await fetch('/upload-session', { method: 'POST', body: fd });
     if (!res.ok) throw new Error('Failed to create upload session: ' + (await res.text()));
@@ -165,7 +167,7 @@ async function hostedDrop(file, onProgress, durationMs = 60 * 60 * 1000, nicknam
 
     if (window.auditLog) auditLog(`🔒 Hosted-drop chunk encryption for "${file.name}"`);
 
-    const session = await createHostedUploadSession(file, durationMs, requestedToken);
+    const session = await createHostedUploadSession(file, durationMs, requestedToken, options);
     const token = session.token;
     const chunkSize = session.chunkSize || HOSTED_CHUNK_SIZE_BYTES;
     const chunkCount = session.chunkCount;
@@ -452,6 +454,14 @@ async function receiveHostedDrop() {
 
     const applyMeta = (nextMeta) => {
         meta = nextMeta;
+        const windowOpen = meta.downloadAvailable !== false;
+        const windowLabel = meta.accessWindow
+            ? `${meta.accessWindow.start}–${meta.accessWindow.end} server time`
+            : '';
+        if (downloadBtn) {
+            downloadBtn.disabled = !windowOpen;
+            downloadBtn.title = windowOpen ? '' : `Downloads open daily: ${windowLabel}`;
+        }
         const isCol = !!(meta.isCollection || (meta.filename && meta.filename.endsWith('.json')));
         if (isCol && mainIconEl) {
             mainIconEl.innerHTML = '<i class="fa-solid fa-layer-group"></i>';
@@ -489,7 +499,7 @@ async function receiveHostedDrop() {
             } else if (meta.status === 'downloadable' || meta.status === 'ready') {
                 iconClass = 'hosted-direction-icon';
                 directionEl.style.backgroundImage = 'var(--hosted-indicator-download)';
-                label = 'Ready to Download';
+                label = windowOpen ? 'Ready to Download' : `Downloads open ${windowLabel}`;
             } else if (meta.status === 'downloading') {
                 iconClass = 'hosted-direction-icon';
                 directionEl.style.backgroundImage = 'var(--hosted-indicator-download)';

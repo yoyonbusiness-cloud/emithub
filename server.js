@@ -42,6 +42,41 @@ function startServer(port = 3000) {
         return typeof token === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(token);
     }
 
+    function parseAccessWindow(start, end) {
+        if (!start && !end) return { window: null };
+        const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
+        const startMatch = typeof start === 'string' && start.match(timePattern);
+        const endMatch = typeof end === 'string' && end.match(timePattern);
+        if (!startMatch || !endMatch) return { error: 'Both timed-window values must use HH:MM.' };
+
+        const startMinutes = Number(startMatch[1]) * 60 + Number(startMatch[2]);
+        const endMinutes = Number(endMatch[1]) * 60 + Number(endMatch[2]);
+        const durationMinutes = (endMinutes - startMinutes + 1440) % 1440;
+        if (durationMinutes === 0 || durationMinutes > 240) {
+            return { error: 'Timed window must be between 1 minute and 4 hours.' };
+        }
+        return { window: { start, end } };
+    }
+
+    function isAccessWindowOpen(accessWindow, now = new Date()) {
+        if (!accessWindow) return true;
+        const [startHour, startMinute] = accessWindow.start.split(':').map(Number);
+        const [endHour, endMinute] = accessWindow.end.split(':').map(Number);
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const startMinutes = startHour * 60 + startMinute;
+        const endMinutes = endHour * 60 + endMinute;
+        return startMinutes < endMinutes
+            ? currentMinutes >= startMinutes && currentMinutes < endMinutes
+            : currentMinutes >= startMinutes || currentMinutes < endMinutes;
+    }
+
+    function denyClosedAccessWindow(res, accessWindow) {
+        return res.status(423).json({
+            error: `This download is available daily from ${accessWindow.start} to ${accessWindow.end} (server time).`,
+            accessWindow
+        });
+    }
+
     const storage = multer.diskStorage({
         destination: (req, file, cb) => cb(null, DROPS_DIR),
         filename: (req, file, cb) => {
@@ -390,10 +425,12 @@ function startServer(port = 3000) {
         const originalName = req.body.name || 'file';
         const size = safeParseInt(req.body.size);
         const expiryMs = safeParseInt(req.body.expiry);
+        const accessWindowResult = parseAccessWindow(req.body.accessWindowStart, req.body.accessWindowEnd);
 
         if (!size || size <= 0) return res.status(400).json({ error: 'Invalid size' });
         if (size > CHUNKED_DROP_MAX_BYTES) return res.status(400).json({ error: 'File too large for hosted drop (chunked)' });
         if (!expiryMs || expiryMs < 60000 || expiryMs > MAX_HOSTED_EXPIRY_MS) return res.status(400).json({ error: 'Invalid expiry' });
+        if (accessWindowResult.error) return res.status(400).json({ error: accessWindowResult.error });
 
         let token = req.body.token;
         if (token && !isSafeToken(token)) return res.status(400).json({ error: 'Invalid token' });
@@ -429,6 +466,7 @@ function startServer(port = 3000) {
             size,
             chunkSize,
             chunkCount,
+            accessWindow: accessWindowResult.window,
             createdAt: Date.now(),
             partsReceived: partsReceived
         });
@@ -518,7 +556,8 @@ function startServer(port = 3000) {
             isCollection: isCollection,
             totalSize: totalSize,
             displayName: displayName,
-            burnOnDownload: burnOnDownload
+            burnOnDownload: burnOnDownload,
+            accessWindow: session.accessWindow
         };
 
         fs.writeFileSync(path.join(basePath, 'manifest.json'), JSON.stringify(manifest));
@@ -592,11 +631,13 @@ function startServer(port = 3000) {
                 burnOnDownload: !!meta.burnOnDownload,
                 isCollection: !!meta.isCollection || (meta.filename && meta.filename.endsWith('.json')),
                 totalSize: meta.totalSize || null,
-                displayName: meta.displayName || null
+                displayName: meta.displayName || null,
+                accessWindow: meta.accessWindow || null,
+                downloadAvailable: isAccessWindowOpen(meta.accessWindow)
             });
             return;
         }
-        res.json({ filename: meta.filename, size: meta.size, expires: meta.expires, mode: meta.mode || 'legacy', burnOnDownload: !!meta.burnOnDownload, status: 'ready' });
+        res.json({ filename: meta.filename, size: meta.size, expires: meta.expires, mode: meta.mode || 'legacy', burnOnDownload: !!meta.burnOnDownload, status: 'ready', accessWindow: meta.accessWindow || null, downloadAvailable: isAccessWindowOpen(meta.accessWindow) });
     });
 
     app.get('/download-chunk/:token/:index', (req, res) => {
@@ -605,6 +646,7 @@ function startServer(port = 3000) {
         if (!meta) return res.status(404).send(`Drop token not found: ${req.params.token}`);
         if (meta.expires && Date.now() > meta.expires) return res.status(410).send(`Drop expired: ${req.params.token}`);
         if (meta.mode !== 'chunked') return res.status(400).send('Not a chunked drop');
+        if (!isAccessWindowOpen(meta.accessWindow)) return denyClosedAccessWindow(res, meta.accessWindow);
 
         const index = safeParseInt(req.params.index);
         if (index === null || index < 0 || index >= meta.chunkCount) return res.status(400).send(`Chunk index out of range: ${req.params.index}`);
@@ -626,6 +668,7 @@ function startServer(port = 3000) {
         const meta = dropMeta.get(req.params.token);
         if (!meta || (meta.expires && Date.now() > meta.expires)) return res.status(404).send('Drop expired or not found');
         if (meta.mode === 'chunked') return res.status(400).send('Chunked drop: use /download-chunk');
+        if (!isAccessWindowOpen(meta.accessWindow)) return denyClosedAccessWindow(res, meta.accessWindow);
         let fpath = path.join(DROPS_DIR, req.params.token);
         if (!fs.existsSync(fpath)) {
             fpath = path.join(FOREVER_FILES_DIR, req.params.token);
